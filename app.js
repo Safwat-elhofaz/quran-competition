@@ -176,7 +176,7 @@ async function loadHistory(monthly){
   $("weeklyHistory").innerHTML=w.data.length?w.data.map(x=>"<tr><td>"+esc(x.title||("الأسبوع "+weekName(x.week_number)))+"</td><td>"+dateText(x.week_start)+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل أسبوعي</td></tr>';
   $("monthlyHistory").innerHTML=c.data.length?c.data.map(x=>"<tr><td>"+esc(x.title||"التحدي الشهري")+"</td><td>"+dateText(x.month_start)+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='monthly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
 }
-$("weeklyHistory").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
+$("weeklyHistory").onclick=handleHistoryClick;$("weeklyProgress").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
 async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
 async function showPeriodResults(type,id){
   try{
