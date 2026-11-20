@@ -77,9 +77,7 @@ async function loadDashboard(){
       const v=ranked.find(y=>y.student_id===x.id),points=v?.total_points??0;
       return "<tr><td>"+esc(x.full_name)+"</td><td>"+esc(x.student_code)+"</td><td>"+points+"</td><td>"+level(points)+"</td><td>"+(rankById.get(x.id)||"—")+"</td><td class='"+(x.is_active?"status-active":"")+"'>"+(x.is_active?"نشط":"موقوف")+"</td></tr>"
     }).join(""):'<tr><td colspan="6">لا يوجد طلاب حتى الآن</td></tr>';
-    const activeStudents=s.data.filter(x=>x.is_active);
-    const studentOptions='<option value="">اختر الطالب</option>'+activeStudents.map(x=>'<option value="'+x.id+'">'+esc(x.full_name)+" — "+esc(x.student_code)+"</option>").join("");
-    $("pointsStudent").innerHTML=studentOptions;
+    renderStudentManagement();
     resetManualStudentLookup();
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
     renderPeriodControls(c,w);await loadHistory(c)
