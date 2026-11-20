@@ -4,7 +4,7 @@ const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
 const views=["homeView","studentView","adminLoginView","changePasswordView","adminView"];
 const levels=[{points:75,name:"الساعي"},{points:100,name:"البرونزي"},{points:150,name:"الفضي"},{points:200,name:"الذهبي"},{points:250,name:"الماسي"},{points:300,name:"الملكي"}];
-let pendingAdmin=null,lastBootstrapCredentials=[];
+let pendingAdmin=null;
 function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"})}
 function msg(id,t,bad=false){$(id).textContent=t;$(id).style.color=bad?"#f1a39a":"#b58b3b"}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -141,17 +141,5 @@ $("addPointsForm").onsubmit=async e=>{
     const r=await db.from("point_entries").insert({student_id:student,points_delta:n,competition_id:monthly?.id??null,weekly_challenge_id:weekly?.id??null,created_by:user.id,entry_type:"session"});if(r.error)throw r.error;
     $("addPointsForm").reset();msg("pointsMessage","تم تسجيل النقاط وإضافتها إلى الإجمالي التراكمي.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر تسجيل النقاط: "+e.message,true)}
-};
-$("setupAdminsOpen").onclick=()=>$("bootstrapBox").classList.toggle("hidden");
-$("bootstrapForm").onsubmit=async e=>{
-  e.preventDefault();const token=$("bootstrapToken").value.trim();if(token.length<30){msg("bootstrapMessage","رمز التهيئة غير صحيح.",true);return}
-  msg("bootstrapMessage","جاري إنشاء حسابات المشرفين الستة...");$("bootstrapSubmit").disabled=true;
-  const r=await db.functions.invoke("bootstrap-admins",{body:{},headers:{"x-bootstrap-token":token}});
-  $("bootstrapSubmit").disabled=false;
-  if(r.error||!r.data?.credentials){msg("bootstrapMessage",r.data?.error||r.error?.message||"تعذر إنشاء الحسابات.",true);return}
-  lastBootstrapCredentials=r.data.credentials;$("bootstrapToken").value="";$("bootstrapForm").classList.add("hidden");
-  $("bootstrapCredentials").innerHTML="<h3>بيانات الدخول المؤقتة — احفظها الآن</h3><p>لن تظهر كلمات المرور مرة أخرى بعد إغلاق هذه الصفحة.</p><div class='table-wrap'><table><thead><tr><th>اسم المستخدم</th><th>كلمة المرور المؤقتة</th></tr></thead><tbody>"+lastBootstrapCredentials.map(x=>"<tr><td>"+esc(x.username)+"</td><td><code>"+esc(x.password)+"</code></td></tr>").join("")+"</tbody></table></div><button id='copyBootstrapCredentials' class='secondary' type='button'>نسخ بيانات الدخول</button>";
-  $("copyBootstrapCredentials").onclick=async()=>{const text=lastBootstrapCredentials.map(x=>x.username+" : "+x.password).join("\n");await navigator.clipboard.writeText(text);msg("bootstrapMessage","تم نسخ بيانات الدخول.")};
-  msg("bootstrapMessage","تم إنشاء حسابات المشرفين الستة بنجاح. احفظ كلمات المرور قبل مغادرة الصفحة.")
 };
 (async()=>{const r=await db.auth.getSession();if(r.data.session){try{await routeAdmin(r.data.session.user)}catch(e){await db.auth.signOut()}}})();
