@@ -16,7 +16,7 @@ function localDate(){const d=new Date();return d.getFullYear()+"-"+String(d.getM
 function monthStart(){return localDate().slice(0,8)+"01"}
 async function currentAdmin(){const r=await db.auth.getUser();if(r.error||!r.data.user)throw Error("انتهت الجلسة، سجل الدخول مرة أخرى.");return r.data.user}
 async function activeMonthly(){const r=await db.from("competitions").select("id,month_start,title,status,created_at").eq("status","active").maybeSingle();if(r.error)throw r.error;return r.data}
-async function activeWeekly(){const r=await db.from("weekly_challenges").select("id,week_start,title,status,created_at").eq("status","active").maybeSingle();if(r.error)throw r.error;return r.data}
+async function activeWeekly(){const r=await db.from("weekly_challenges").select("id,competition_id,week_number,week_start,title,status,created_at").eq("status","active").maybeSingle();if(r.error)throw r.error;return r.data}
 async function writeAudit(user,action,type,id,details={}){const r=await db.from("admin_audit_logs").insert({admin_user_id:user.id,action,entity_type:type,entity_id:id?String(id):null,details});if(r.error)throw r.error}
 function dateText(value){if(!value)return "—";return new Date(value+"T00:00:00").toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"})}
 $("studentOpen").onclick=()=>show("studentView");
@@ -82,7 +82,7 @@ async function loadDashboard(){
     $("pointsStudent").innerHTML=studentOptions;
     $("manualPointsStudent").innerHTML=studentOptions;
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
-    renderPeriodControls(c,w);await loadHistory()
+    renderPeriodControls(c,w);await loadHistory(c)
   }catch(e){msg("addStudentMessage","تعذر تحميل البيانات: "+e.message,true)}
 }
 
@@ -149,19 +149,31 @@ $("studentLookupForm").onsubmit=e=>{
   $("studentLookupResult").innerHTML="<strong>"+esc(student.full_name)+"</strong><span>كود الطالب: "+esc(student.student_code)+"</span><span>إجمالي النقاط: "+total+"</span><span>المستوى: "+level(total)+"</span><span>الترتيب العام: "+rank+"</span><span>الحالة: "+(student.is_active?"نشط":"موقوف")+"</span>";
   $("studentLookupResult").classList.remove("hidden");msg("studentLookupMessage","");
 };
+function weekName(n){return ["","الأول","الثاني","الثالث","الرابع","الخامس"][n]||String(n)}
 function renderPeriodControls(monthly,weekly){
   $("monthlyStatus").textContent=monthly?"نشط — بدأ في "+dateText(monthly.month_start):"لا يوجد تحدٍ شهري نشط";
   $("monthlyStartBtn").classList.toggle("hidden",!!monthly);$("monthlyEndBtn").classList.toggle("hidden",!monthly);
-  $("weeklyStatus").textContent=weekly?"نشط — بدأ في "+dateText(weekly.week_start):"لا يوجد تحدٍ أسبوعي نشط";
-  $("weeklyStartBtn").classList.toggle("hidden",!!weekly);$("weeklyEndBtn").classList.toggle("hidden",!weekly)
+  $("weeklyStatus").textContent=weekly?"نشط — الأسبوع "+weekName(weekly.week_number)+" — بدأ في "+dateText(weekly.week_start):"لا يوجد أسبوع نشط حاليًا";
+  $("weeklyEndBtn").classList.toggle("hidden",!weekly);
+  $("weeklyStartBtn").classList.toggle("hidden",!!weekly||!monthly);
+  $("weeklyStartBtn").textContent="بدء الأسبوع التالي"
 }
-async function loadHistory(){
+async function loadHistory(monthly){
   const [w,c]=await Promise.all([
-    db.from("weekly_challenges").select("id,title,week_start,status").order("created_at",{ascending:false}).limit(8),
+    db.from("weekly_challenges").select("id,competition_id,week_number,title,week_start,status").order("created_at",{ascending:false}).limit(40),
     db.from("competitions").select("id,title,month_start,status").order("month_start",{ascending:false}).limit(8)
   ]);
   if(w.error)throw w.error;if(c.error)throw c.error;
-  $("weeklyHistory").innerHTML=w.data.length?w.data.map(x=>"<tr><td>"+esc(x.title)+"</td><td>"+dateText(x.week_start)+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل أسبوعي</td></tr>';
+  const activeMonthWeeks=(w.data||[]).filter(x=>x.competition_id===monthly?.id);
+  const weekByNumber=new Map(activeMonthWeeks.map(x=>[x.week_number,x]));
+  $("weeklyProgress").innerHTML=Array.from({length:5},(_,i)=>{
+    const n=i+1,x=weekByNumber.get(n),status=x?(x.status==="active"?"نشط الآن":"مكتمل"):"لم يبدأ";
+    return "<div class='week-slot "+(x?.status==="active"?"is-active":x?"is-done":"")+"'><b>الأسبوع "+weekName(n)+"</b><span>"+status+"</span>"+(x?"<small>"+dateText(x.week_start)+"</small><button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button>":"")+"</div>"
+  }).join("");
+  const nextNumber=activeMonthWeeks.reduce((m,x)=>Math.max(m,Number(x.week_number)||0),0)+1;
+  $("weeklyStartBtn").classList.toggle("hidden",!!(await activeWeekly())||!monthly||nextNumber>5);
+  $("weeklyStartBtn").textContent=nextNumber<=5?"بدء الأسبوع "+weekName(nextNumber):"اكتملت الأسابيع الخمسة";
+  $("weeklyHistory").innerHTML=w.data.length?w.data.map(x=>"<tr><td>"+esc(x.title||("الأسبوع "+weekName(x.week_number)))+"</td><td>"+dateText(x.week_start)+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل أسبوعي</td></tr>';
   $("monthlyHistory").innerHTML=c.data.length?c.data.map(x=>"<tr><td>"+esc(x.title||"التحدي الشهري")+"</td><td>"+dateText(x.month_start)+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='monthly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
 }
 $("weeklyHistory").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
@@ -178,10 +190,16 @@ async function showPeriodResults(type,id){
   }catch(e){msg("pointsMessage","تعذر عرض النتائج: "+e.message,true)}
 }
 $("weeklyStartBtn").onclick=async()=>{
-  try{const user=await currentAdmin(),active=await activeWeekly();if(active){msg("pointsMessage","يوجد تحدٍ أسبوعي نشط بالفعل.",true);return}
-    const r=await db.from("weekly_challenges").insert({week_start:localDate(),created_by:user.id}).select("id").single();if(r.error)throw r.error;
-    await writeAudit(user,"start","weekly_challenge",r.data.id,{week_start:localDate()});msg("pointsMessage","بدأ التحدي الأسبوعي بنجاح.");await loadDashboard()
-  }catch(e){msg("pointsMessage","تعذر بدء التحدي الأسبوعي: "+e.message,true)}
+  try{
+    const user=await currentAdmin(),active=await activeWeekly();
+    if(active){msg("pointsMessage","يوجد أسبوع نشط بالفعل.",true);return}
+    const r=await db.rpc("admin_start_weekly_challenge",{p_week_start:localDate()});
+    if(r.error)throw r.error;
+    const created=Array.isArray(r.data)?r.data[0]:r.data;
+    if(!created)throw Error("لم تصل بيانات الأسبوع الجديد.");
+    await writeAudit(user,"start","weekly_challenge",created.id,{week_start:created.week_start,competition_id:created.competition_id,week_number:created.week_number});
+    msg("pointsMessage","بدأ الأسبوع "+weekName(created.week_number)+" بنجاح.");await loadDashboard()
+  }catch(e){msg("pointsMessage","تعذر بدء الأسبوع: "+e.message,true)}
 };
 $("weeklyEndBtn").onclick=async()=>{
   try{const user=await currentAdmin(),active=await activeWeekly();if(!active)throw Error("لا يوجد تحدٍ أسبوعي نشط.");
