@@ -124,7 +124,7 @@ $("manualPointsCode").oninput=resetManualStudentLookup;
 function updateManualPointsPreview(){
   const id=$("manualPointsStudentId").value,mode=$("manualPointsMode").value,value=Number($("manualPointsValue").value);
   const current=Number(dashboardRanked.find(x=>x.student_id===id)?.total_points||0);
-  if(!id){$("manualPointsPreview").textContent="اختر الطالب ونوع التعديل لعرض معاينة النقاط.";return}
+  if(!id){$("manualPointsPreview").textContent="ابحث بكود الطالب وحدد نوع التعديل لعرض معاينة النقاط.";return}
   if($("manualPointsValue").value===""||!Number.isInteger(value)||value<0||(mode!=="set_total"&&value===0)){
     $("manualPointsPreview").textContent="إجمالي الطالب الحالي: "+current+" نقطة.";return
   }
@@ -226,8 +226,9 @@ $("weeklyStartBtn").onclick=async()=>{
 };
 $("weeklyEndBtn").onclick=async()=>{
   try{const user=await currentAdmin(),active=await activeWeekly();if(!active)throw Error("لا يوجد تحدٍ أسبوعي نشط.");
-    const r=await db.from("weekly_challenges").update({status:"archived",ended_at:new Date().toISOString(),ended_by:user.id}).eq("id",active.id);if(r.error)throw r.error;
-    await writeAudit(user,"end","weekly_challenge",active.id,{week_start:active.week_start,week_end:active.week_end});msg("pointsMessage","انتهى التحدي الأسبوعي وحُفظت نتائجه.");await loadDashboard()
+    const finalWeekEnd=active.week_end||localDate();
+    const r=await db.from("weekly_challenges").update({status:"archived",week_end:finalWeekEnd,ended_at:new Date().toISOString(),ended_by:user.id}).eq("id",active.id);if(r.error)throw r.error;
+    await writeAudit(user,"end","weekly_challenge",active.id,{week_start:active.week_start,week_end:finalWeekEnd});msg("pointsMessage","انتهى التحدي الأسبوعي وحُفظت نتائجه.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الأسبوعي: "+e.message,true)}
 };
 $("monthlyStartBtn").onclick=async()=>{
