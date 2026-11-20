@@ -35,3 +35,9 @@
 .dark .leaderboard-select{background:#14221b;color:var(--ink);border-color:var(--line)}
 .dark .leaderboard-rank.rank-1,.dark .leaderboard-rank.rank-2,.dark .leaderboard-rank.rank-3{background:#574827;color:#f5dfac}
 @media(max-width:700px){.leaderboard-section{padding:17px}.leaderboard-grid{grid-template-columns:1fr}.leaderboard-heading h2{font-size:20px}.leaderboard-mark{font-size:34px}}
+
+.student-editor{margin:16px 0;padding:18px;border:1px solid var(--gold-light);border-radius:15px;background:var(--green-soft)}
+.student-editor h4{margin:0;color:var(--green-deep)}
+.student-editor .actions{margin-top:6px}
+.student-target-group{margin-top:7px!important;color:var(--green-deep)!important;font-size:13px!important}
+.dark .student-editor{background:#20392d}
