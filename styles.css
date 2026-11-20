@@ -290,3 +290,47 @@ button:disabled{opacity:.6;cursor:wait}
 @media(prefers-reduced-motion:reduce){
  .brand .mark,.leaderboard-section:before{animation:none!important}
 }
+
+
+/* ===== Brand emblems: Athar & Noor ===== */
+.identity-marks{
+ position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+ gap:22px;max-width:760px;margin:25px auto 28px;padding:8px 18px;
+}
+.identity-mark{
+ position:relative;isolation:isolate;min-height:112px;display:flex;flex-direction:column;
+ align-items:center;justify-content:center;gap:4px;text-align:center;overflow:hidden;
+ padding:17px 22px;border:1px solid rgba(181,139,59,.34);border-radius:20px;
+ background:linear-gradient(145deg,rgba(255,255,255,.84),rgba(234,242,236,.72));
+ box-shadow:0 9px 25px rgba(24,57,44,.045);
+ transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease;
+}
+.identity-mark:before,.identity-mark:after{
+ content:"";position:absolute;inset:7px;border:1px solid rgba(181,139,59,.17);
+ border-radius:14px;pointer-events:none;z-index:-1;
+}
+.identity-mark:after{
+ inset:auto auto -40px 50%;width:100px;height:100px;transform:translateX(-50%);
+ border:1px solid rgba(181,139,59,.15);border-radius:50%;
+ box-shadow:0 0 0 9px rgba(181,139,59,.025),0 0 0 18px rgba(181,139,59,.02);
+}
+.identity-symbol{font-size:19px;line-height:1;color:var(--gold)}
+.identity-phrase{
+ color:var(--green-deep);font-family:"Amiri","Noto Naskh Arabic",serif;
+ font-size:clamp(22px,3vw,29px);font-weight:700;line-height:1.45;
+}
+.identity-caption{font-size:10px;color:var(--muted);letter-spacing:.3px}
+.identity-divider{font-size:25px;color:rgba(181,139,59,.55);animation:soft-glow 4.5s ease-in-out infinite}
+.identity-mark:hover{transform:translateY(-4px);border-color:rgba(181,139,59,.65);box-shadow:0 14px 30px rgba(24,57,44,.09)}
+.dark .identity-mark{background:linear-gradient(145deg,#20392d,#192a22);border-color:#d7b66b55}
+.dark .identity-mark:before,.dark .identity-mark:after{border-color:#d7b66b30}
+.dark .identity-phrase{color:#f0e5c9}
+@media(max-width:560px){
+ .identity-marks{gap:8px;padding:5px 0;margin:18px auto 21px}
+ .identity-mark{min-height:102px;padding:13px 8px;border-radius:16px}
+ .identity-mark:before{inset:5px}
+ .identity-phrase{font-size:21px}
+ .identity-caption{font-size:9px}
+ .identity-divider{font-size:19px}
+}
+@media(prefers-reduced-motion:reduce){.identity-divider{animation:none}}
