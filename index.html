@@ -6,18 +6,37 @@
 <title>صفوة الحفاظ | مسابقة الشهر</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script><script defer src="app.js?v=20261120-3"></script>
+<link rel="stylesheet" href="styles.css?v=20261120-4">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script><script defer src="app.js?v=20261120-4"></script>
 </head>
 <body>
 <header class="topbar"><a class="brand" href="#"><span class="mark">۞</span><span><b>صفوة الحفاظ</b><small>مسابقة النقاط</small></span></a><button id="themeToggle" class="theme" aria-label="تغيير المظهر">☼</button></header>
 <main>
-<section id="homeView" class="hero">
+<div id="homeView"><section class="hero">
 <div class="eyebrow">● بوابة المسابقة</div><h1>كل نقطة تقرّبك<br><em>من القمة</em></h1>
 <p>تابع إنجازك، واعرف مستواك وترتيبك في مسابقة صفوة الحفاظ.</p>
 <div class="actions"><button id="studentOpen" class="primary">استعلام الطالب ←</button><button id="adminOpen" class="secondary">دخول المشرفين</button></div>
 <div class="seal">۞</div><small class="motto">✦ بالقرآن نرتقي، وبالإتقان نتميز</small>
 </section>
+<section class="content leaderboard-section" aria-labelledby="leaderboardsTitle">
+  <div class="leaderboard-heading"><div><div class="eyebrow">لوحات الشرف</div><h2 id="leaderboardsTitle">المتصدرون في صفوة الحفاظ</h2><p class="muted-note">ترتيب محدث حسب إجمالي النقاط التراكمي للطلاب النشطين.</p></div><span class="leaderboard-mark">۞</span></div>
+  <div class="leaderboard-grid">
+    <article class="leaderboard-card">
+      <div class="leaderboard-card-head"><div><h3>الترتيب العام</h3><p>أفضل 10 طلاب في المركز كله</p></div><span class="leaderboard-top10">TOP 10</span></div>
+      <div class="table-wrap"><table class="leaderboard-table"><thead><tr><th>المركز</th><th>اسم الطالب</th><th>النقاط</th></tr></thead><tbody id="overallLeaderboard"><tr><td colspan="3">جاري تحميل الترتيب...</td></tr></tbody></table></div>
+    </article>
+    <article class="leaderboard-card">
+      <div class="leaderboard-card-head"><div><h3>ترتيب المستويات</h3><p>أفضل الطلاب داخل كل مستوى</p></div></div>
+      <label class="leaderboard-select-label" for="leaderboardLevelSelect">اختار المستوى</label>
+      <select id="leaderboardLevelSelect" class="leaderboard-select">
+        <option value="الملكي">الملكي</option><option value="الماسي">الماسي</option><option value="الذهبي" selected>الذهبي</option><option value="الفضي">الفضي</option><option value="البرونزي">البرونزي</option><option value="الساعي">الساعي</option>
+      </select>
+      <div class="table-wrap"><table class="leaderboard-table"><thead><tr><th>المركز</th><th>اسم الطالب</th><th>النقاط</th></tr></thead><tbody id="levelLeaderboard"><tr><td colspan="3">جاري تحميل الترتيب...</td></tr></tbody></table></div>
+    </article>
+  </div>
+  <p id="leaderboardMessage" class="leaderboard-message" aria-live="polite"></p>
+</section>
+</div>
 <section id="studentView" class="panel hidden"><button class="back" data-back>→ الرئيسية</button><div id="studentLookupIntro"><h2>استعلام الطالب</h2><p>اكتب الكود المكوّن من خمسة أرقام لعرض صفحتك وترتيبك.</p><form id="studentForm" class="stack"><label for="studentCode">كود الطالب</label><input id="studentCode" inputmode="numeric" maxlength="10" placeholder="00000" autocomplete="off" required><button class="primary">عرض صفحتي ←</button></form><p id="studentMessage" class="message" aria-live="polite"></p></div><div id="studentProfile" class="student-profile hidden"></div></section>
 <section id="adminLoginView" class="panel hidden"><button class="back" data-back>→ الرئيسية</button><h2>دخول المشرفين</h2><p>هذه المنطقة مخصصة لإدارة المسابقة</p><form id="loginForm" class="stack"><label for="username">اسم المستخدم</label><input id="username" autocomplete="username" required><label for="password">كلمة المرور</label><input id="password" type="password" autocomplete="current-password" required><button class="primary">تسجيل الدخول ←</button></form><p id="loginMessage" class="message" aria-live="polite"></p></section>
 <section id="changePasswordView" class="panel hidden"><h2>تغيير كلمة المرور</h2><p>دي كلمة مرور مؤقتة. اختار كلمة مرور جديدة خاصة بيك قبل استخدام لوحة التحكم.</p><form id="changePasswordForm" class="stack"><label for="newAdminPassword">كلمة المرور الجديدة</label><input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" required><label for="confirmAdminPassword">تأكيد كلمة المرور</label><input id="confirmAdminPassword" type="password" minlength="12" autocomplete="new-password" required><button class="primary">حفظ كلمة المرور</button></form><p id="changePasswordMessage" class="message" aria-live="polite"></p></section>
