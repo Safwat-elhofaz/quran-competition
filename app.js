@@ -5,6 +5,9 @@ const $=id=>document.getElementById(id);
 const views=["homeView","studentView","adminLoginView","changePasswordView","adminView"];
 const levels=[{points:75,name:"الساعي"},{points:100,name:"البرونزي"},{points:150,name:"الفضي"},{points:200,name:"الذهبي"},{points:250,name:"الماسي"},{points:300,name:"الملكي"}];
 let pendingAdmin=null;
+let dashboardStudents=[];
+let dashboardRanked=[];
+let dashboardRankById=new Map();
 function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"})}
 function msg(id,t,bad=false){$(id).textContent=t;$(id).style.color=bad?"#f1a39a":"#b58b3b"}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -55,26 +58,97 @@ $("changePasswordForm").onsubmit=async e=>{
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();pendingAdmin=null;show("homeView")};
 async function loadDashboard(){
   try{
-    const [s,a,c,w,t]=await Promise.all([
+    const [s,a,c,w,t,adminProfiles]=await Promise.all([
       db.from("students").select("id,student_code,full_name,is_active").order("full_name"),
       db.from("admin_profiles").select("user_id",{count:"exact",head:true}).eq("is_active",true),
       activeMonthly(),activeWeekly(),
-      db.from("student_lifetime_totals").select("student_id,full_name,student_code,is_active,total_points")
+      db.from("student_lifetime_totals").select("student_id,full_name,student_code,is_active,total_points"),
+      db.from("admin_profiles").select("user_id,display_name").eq("is_active",true)
     ]);
-    if(s.error)throw s.error;if(a.error)throw a.error;if(t.error)throw t.error;
+    if(s.error)throw s.error;if(a.error)throw a.error;if(t.error)throw t.error;if(adminProfiles.error)throw adminProfiles.error;
     const ranked=[...(t.data||[])].sort((x,y)=>y.total_points-x.total_points||x.full_name.localeCompare(y.full_name,"ar"));
+    dashboardStudents=s.data||[];dashboardRanked=ranked;
     const sum=ranked.reduce((n,x)=>n+x.total_points,0);
     $("studentsCount").textContent=s.data.length;$("adminsCount").textContent=a.count??0;$("pointsCount").textContent=sum;
     const rankById=new Map();let currentRank=0,previousPoints=null;
     ranked.forEach((x,i)=>{if(i===0||x.total_points!==previousPoints)currentRank=i+1;rankById.set(x.student_id,currentRank);previousPoints=x.total_points});
+    dashboardRankById=rankById;
     $("studentsTable").innerHTML=s.data.length?s.data.map(x=>{
       const v=ranked.find(y=>y.student_id===x.id),points=v?.total_points??0;
       return "<tr><td>"+esc(x.full_name)+"</td><td>"+esc(x.student_code)+"</td><td>"+points+"</td><td>"+level(points)+"</td><td>"+(rankById.get(x.id)||"—")+"</td><td class='"+(x.is_active?"status-active":"")+"'>"+(x.is_active?"نشط":"موقوف")+"</td></tr>"
     }).join(""):'<tr><td colspan="6">لا يوجد طلاب حتى الآن</td></tr>';
-    $("pointsStudent").innerHTML='<option value="">اختر الطالب</option>'+s.data.filter(x=>x.is_active).map(x=>'<option value="'+x.id+'">'+esc(x.full_name)+" — "+esc(x.student_code)+"</option>").join("");
+    const activeStudents=s.data.filter(x=>x.is_active);
+    const studentOptions='<option value="">اختر الطالب</option>'+activeStudents.map(x=>'<option value="'+x.id+'">'+esc(x.full_name)+" — "+esc(x.student_code)+"</option>").join("");
+    $("pointsStudent").innerHTML=studentOptions;
+    $("manualPointsStudent").innerHTML=studentOptions;
+    await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
     renderPeriodControls(c,w);await loadHistory()
   }catch(e){msg("addStudentMessage","تعذر تحميل البيانات: "+e.message,true)}
 }
+
+async function loadManualAdjustmentHistory(students,admins){
+  const r=await db.from("admin_audit_logs").select("created_at,admin_user_id,details").eq("entity_type","point_entry").filter("details->>entry_type","eq","adjustment").order("created_at",{ascending:false}).limit(20);
+  if(r.error)throw r.error;
+  const studentMap=new Map((students||[]).map(x=>[x.id,x]));
+  const adminMap=new Map((admins||[]).map(x=>[x.user_id,x.display_name]));
+  $("manualAdjustmentHistory").innerHTML=(r.data||[]).length?r.data.map(x=>{
+    const d=x.details||{},student=studentMap.get(d.student_id);
+    const delta=Number(d.points_delta)||0;
+    const change=delta>0?"زيادة +"+delta:"خصم "+delta;
+    const before=d.previous_total??"—",after=d.new_total??"—";
+    return "<tr><td>"+new Date(x.created_at).toLocaleString("ar-EG")+"</td><td>"+(student?esc(student.full_name)+" ("+esc(student.student_code)+")":"طالب")+"</td><td>"+change+"</td><td>"+before+" ← "+after+"</td><td>"+esc(d.adjustment_reason||"—")+"</td><td>"+esc(adminMap.get(x.admin_user_id)||"مشرف")+"</td></tr>";
+  }).join(""):'<tr><td colspan="6">لا توجد تعديلات يدوية حتى الآن</td></tr>';
+}
+function updateManualPointsLabel(){
+  const mode=$("manualPointsMode").value;
+  $("manualPointsValueLabel").textContent=mode==="set_total"?"الإجمالي الجديد المطلوب":mode==="subtract"?"عدد النقاط المراد خصمها":"عدد النقاط المراد إضافتها";
+  $("manualPointsValue").min=mode==="set_total"?"0":"1";
+  $("manualPointsValue").placeholder=mode==="set_total"?"مثال: 150":"اكتب عدد النقاط";
+  updateManualPointsPreview();
+}
+function updateManualPointsPreview(){
+  const id=$("manualPointsStudent").value,mode=$("manualPointsMode").value,value=Number($("manualPointsValue").value);
+  const current=Number(dashboardRanked.find(x=>x.student_id===id)?.total_points||0);
+  if(!id){$("manualPointsPreview").textContent="اختر الطالب ونوع التعديل لعرض معاينة النقاط.";return}
+  if($("manualPointsValue").value===""||!Number.isInteger(value)||value<0||(mode!=="set_total"&&value===0)){
+    $("manualPointsPreview").textContent="إجمالي الطالب الحالي: "+current+" نقطة.";return
+  }
+  const next=mode==="add"?current+value:mode==="subtract"?current-value:value;
+  $("manualPointsPreview").textContent="الإجمالي الحالي: "+current+" نقطة — بعد التعديل: "+next+" نقطة.";
+}
+$("manualPointsMode").onchange=updateManualPointsLabel;
+$("manualPointsStudent").onchange=updateManualPointsPreview;
+$("manualPointsValue").oninput=updateManualPointsPreview;
+$("manualPointsForm").onsubmit=async e=>{
+  e.preventDefault();
+  const student=$("manualPointsStudent").value,mode=$("manualPointsMode").value,value=Number($("manualPointsValue").value);
+  if(!student||!Number.isInteger(value)||value<0||(mode!=="set_total"&&value===0)){
+    msg("manualPointsMessage","راجع اختيار الطالب وعدد النقاط.",true);return
+  }
+  const label=mode==="add"?"إضافة "+value+" نقطة":mode==="subtract"?"خصم "+value+" نقطة":"تحديد الإجمالي إلى "+value+" نقطة";
+  if(!window.confirm("تأكيد "+label+"؟\nسيؤثر التعديل على الإجمالي العام والتحديات النشطة."))return;
+  try{
+    $("manualPointsMessage").textContent="جاري تنفيذ التعديل...";
+    const r=await db.rpc("admin_adjust_student_points",{p_student_id:student,p_mode:mode,p_points:value,p_reason:$("manualPointsReason").value.trim()||null});
+    if(r.error)throw r.error;
+    const result=Array.isArray(r.data)?r.data[0]:r.data;
+    if(!result)throw Error("لم تصل نتيجة التعديل من قاعدة البيانات.");
+    $("manualPointsForm").reset();updateManualPointsLabel();
+    msg("manualPointsMessage",result.points_delta===0?"الإجمالي بالفعل يساوي القيمة المطلوبة، لم يحدث تغيير.":"تم التعديل بنجاح. الإجمالي: "+result.previous_total+" ← "+result.new_total+" نقطة.");
+    await loadDashboard();
+  }catch(err){msg("manualPointsMessage","تعذر تعديل النقاط: "+err.message,true)}
+};
+$("studentLookupForm").onsubmit=e=>{
+  e.preventDefault();
+  const code=$("studentLookupCode").value.trim();
+  if(!/^\d{5}$/.test(code)){msg("studentLookupMessage","كود الطالب يجب أن يتكون من خمسة أرقام.",true);return}
+  const student=dashboardStudents.find(x=>x.student_code===code);
+  if(!student){$("studentLookupResult").classList.add("hidden");msg("studentLookupMessage","لم يتم العثور على طالب بهذا الكود.",true);return}
+  const total=dashboardRanked.find(x=>x.student_id===student.id)?.total_points||0;
+  const rank=dashboardRankById.get(student.id)||"—";
+  $("studentLookupResult").innerHTML="<strong>"+esc(student.full_name)+"</strong><span>كود الطالب: "+esc(student.student_code)+"</span><span>إجمالي النقاط: "+total+"</span><span>المستوى: "+level(total)+"</span><span>الترتيب العام: "+rank+"</span><span>الحالة: "+(student.is_active?"نشط":"موقوف")+"</span>";
+  $("studentLookupResult").classList.remove("hidden");msg("studentLookupMessage","");
+};
 function renderPeriodControls(monthly,weekly){
   $("monthlyStatus").textContent=monthly?"نشط — بدأ في "+dateText(monthly.month_start):"لا يوجد تحدٍ شهري نشط";
   $("monthlyStartBtn").classList.toggle("hidden",!!monthly);$("monthlyEndBtn").classList.toggle("hidden",!monthly);
