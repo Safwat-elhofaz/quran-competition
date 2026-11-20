@@ -24,8 +24,8 @@ $("adminOpen").onclick=()=>show("adminLoginView");
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>show("homeView"));
 $("themeToggle").onclick=()=>document.body.classList.toggle("dark");
 $("studentForm").onsubmit=async e=>{
- e.preventDefault();const code=$("studentCode").value.trim();
- if(!/^\d{5}$/.test(code)){msg("studentMessage","الكود لازم يكون خمسة أرقام.",true);return}
+ e.preventDefault();const rawCode=$("studentCode").value.trim();const code=rawCode.replace(/[٠-٩]/g,d=>String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[۰-۹]/g,d=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/\s/g,"");$("studentCode").value=code;
+ if(!/^[0-9]{5}$/.test(code)){msg("studentMessage","الكود لازم يكون خمسة أرقام.",true);return}
  const button=$("studentForm").querySelector("button");button.disabled=true;button.textContent="جاري البحث...";
  msg("studentMessage","جاري التحقق من الكود...");
  try{
