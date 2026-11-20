@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101b17"><meta name="description" content="بوابة مسابقة صفوة الحفاظ الشهرية">
+<title>صفوة الحفاظ | مسابقة الشهر</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script><script defer src="app.js"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="#"><span class="mark">۞</span><span><b>صفوة الحفاظ</b><small>مسابقة الشهر</small></span></a><button id="themeToggle" class="theme" aria-label="تغيير المظهر">☼</button></header>
+<main>
+<section id="homeView" class="hero">
+<div class="eyebrow">● بوابة المسابقة الشهرية</div><h1>كل نقطة تقرّبك<br><em>من القمة</em></h1>
+<p>تابع إنجازك، واعرف مستواك وترتيبك في مسابقة صفوة الحفاظ.</p>
+<div class="actions"><button id="studentOpen" class="primary">استعلام الطالب ←</button><button id="adminOpen" class="secondary">دخول المشرفين</button></div>
+<div class="seal">۞</div><small class="motto">✦ بالقرآن نرتقي، وبالإتقان نتميز</small>
+</section>
+<section id="studentView" class="panel hidden"><button class="back" data-back>→ الرئيسية</button><h2>استعلام الطالب</h2><p>اكتب الكود المكوّن من خمسة أرقام</p><form id="studentForm" class="stack"><label for="studentCode">كود الطالب</label><input id="studentCode" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="00000" autocomplete="off" required><button class="primary">عرض صفحتي ←</button></form><p id="studentMessage" class="message" aria-live="polite">استعلام الطلاب سيتم تفعيله بعد إضافة الحماية من التخمين.</p></section>
+<section id="adminLoginView" class="panel hidden"><button class="back" data-back>→ الرئيسية</button><h2>دخول المشرفين</h2><p>هذه المنطقة مخصصة لإدارة المسابقة</p><form id="loginForm" class="stack"><label for="username">اسم المستخدم</label><input id="username" autocomplete="username" required><label for="password">كلمة المرور</label><input id="password" type="password" autocomplete="current-password" required><button class="primary">تسجيل الدخول ←</button></form><p id="loginMessage" class="message" aria-live="polite"></p></section>
+<section id="adminView" class="hidden">
+<div class="dashhead"><div><div class="eyebrow">لوحة التحكم</div><h2>إدارة المسابقة</h2><p id="adminWelcome">أهلًا بك</p></div><button id="logoutBtn" class="secondary">تسجيل الخروج</button></div>
+<div class="stats"><article><span>إجمالي الطلاب</span><strong id="studentsCount">—</strong></article><article><span>إجمالي النقاط</span><strong id="pointsCount">—</strong></article><article><span>المشرفون</span><strong id="adminsCount">—</strong></article></div>
+<div class="admin-grid">
+<section class="content"><h3>إضافة طالب</h3><form id="addStudentForm" class="stack"><label for="newStudentName">اسم الطالب</label><input id="newStudentName" required><label for="newStudentCode">الكود (5 أرقام)</label><input id="newStudentCode" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" required><label for="newStudentCategory">فئة المسابقة</label><select id="newStudentCategory"><option value="sai">الحزب فأقل — ساعي</option><option value="bronze">الجزء — برونزي</option><option value="silver">الجزء ونصف — فضي</option><option value="gold">جزئين — ذهبي</option><option value="diamond">3 أجزاء — ماسي</option><option value="royal">4 أجزاء ونصف — ملكي</option></select><button class="primary">حفظ الطالب</button></form><p id="addStudentMessage" class="message" aria-live="polite"></p></section>
+<section class="content"><h3>إضافة نقاط</h3><form id="addPointsForm" class="stack"><label for="pointsStudent">الطالب</label><select id="pointsStudent" required><option value="">اختر الطالب</option></select><label for="pointsValue">عدد النقاط</label><input id="pointsValue" type="number" step="1" placeholder="مثال: 5 أو -2" required><button class="primary">تسجيل النقاط</button></form><p id="pointsMessage" class="message" aria-live="polite"></p></section>
+</div>
+<section class="content"><h3>الطلاب المسجلون</h3><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الكود</th><th>الفئة</th><th>الحالة</th></tr></thead><tbody id="studentsTable"><tr><td colspan="4">جاري التحميل...</td></tr></tbody></table></div></section>
+</section>
+</main><footer>۞ مركز صفوة الحفاظ<small>نسأل الله القبول والتوفيق</small></footer>
+</body></html>
