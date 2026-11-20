@@ -25,7 +25,7 @@ document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>show("homeView
 $("themeToggle").onclick=()=>document.body.classList.toggle("dark");
 $("studentForm").onsubmit=async e=>{
  e.preventDefault();const code=$("studentCode").value.trim();
- if(!/^\\d{5}$/.test(code)){msg("studentMessage","الكود لازم يكون خمسة أرقام.",true);return}
+ if(!/^\d{5}$/.test(code)){msg("studentMessage","الكود لازم يكون خمسة أرقام.",true);return}
  const button=$("studentForm").querySelector("button");button.disabled=true;button.textContent="جاري البحث...";
  msg("studentMessage","جاري التحقق من الكود...");
  try{
