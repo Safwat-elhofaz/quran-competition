@@ -69,7 +69,7 @@ function renderStudentProfile(data){
  const base=total>=300?300:total>=250?250:total>=200?200:total>=150?150:total>=100?100:total>=75?75:0;
  const progress=next===null?100:Math.max(0,Math.min(100,((total-base)/(next-base))*100));
  $("studentProfile").innerHTML=`
-  <div class="student-profile-head"><div><span class="eyebrow">صفحة الطالب</span><h2>${esc(s.full_name)}</h2><p>كود الطالب: <b>${esc(s.student_code)}</b></p></div><span class="student-level-pill">${esc(s.level)}</span></div>
+  <div class="student-profile-head"><div><span class="eyebrow">صفحة الطالب</span><h2>${esc(s.full_name)}</h2><p>كود الطالب: <b>${esc(s.student_code)}</b></p><p class="student-target-group">المجموعة المستهدفة: <b>${esc(s.group_level||"لم تُحدد بعد")}</b></p></div><span class="student-level-pill">مستوى النقاط: ${esc(s.level)}</span></div>
   <div class="student-stats-grid"><article><span>إجمالي نقاطك</span><strong>${total}</strong></article><article><span>ترتيبك داخل مستواك</span><strong>${Number(s.level_rank)||"—"} <small>من ${Number(s.level_size)||0}</small></strong></article><article><span>ترتيبك العام في المركز</span><strong>${Number(s.overall_rank)||"—"} <small>من ${Number(s.overall_size)||0}</small></strong></article></div>
   <section class="student-progress-card"><h3>تقدمك للمستوى التالي</h3><div class="progress-label"><span>${next===null?"وصلت لأعلى مستوى":"المستوى التالي: "+esc(s.next_level)}</span><b>${next===null?"مكتمل":total+" / "+next+" نقطة"}</b></div><div class="progress-track"><span style="width:${progress}%"></span></div><p>${next===null?"وصلت إلى أعلى مستوى في النظام.":"متبقي لك "+Math.max(0,next-total)+" نقطة للوصول للمستوى التالي."}</p></section>
   <div class="student-challenges-grid">
@@ -114,7 +114,7 @@ $("logoutBtn").onclick=async()=>{await db.auth.signOut();pendingAdmin=null;show(
 async function loadDashboard(){
   try{
     const [s,a,c,w,t,adminProfiles]=await Promise.all([
-      db.from("students").select("id,student_code,full_name,is_active").order("full_name"),
+      db.from("students").select("id,student_code,full_name,is_active,group_level").order("full_name"),
       db.from("admin_profiles").select("user_id",{count:"exact",head:true}).eq("is_active",true),
       activeMonthly(),activeWeekly(),
       db.from("student_lifetime_totals").select("student_id,full_name,student_code,is_active,total_points"),
@@ -155,14 +155,31 @@ async function loadManualAdjustmentHistory(students,admins){
 function renderStudentManagement(){
  const name=$("studentManageNameSearch").value.trim().toLocaleLowerCase("ar"),code=$("studentManageCodeSearch").value.trim();
  const rows=dashboardStudents.filter(x=>(!name||x.full_name.toLocaleLowerCase("ar").includes(name))&&(!code||x.student_code.includes(code)));
- $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);return "<tr><td>"+esc(x.full_name)+"</td><td>"+esc(x.student_code)+"</td><td>"+total+"</td><td>"+(x.is_active?"نشط":"موقوف")+"</td><td><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف نهائي</button></td></tr>"}).join(""):"<tr><td colspan='5'>لا توجد نتائج مطابقة.</td></tr>";
+ $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{
+  const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
+  return "<tr><td>"+esc(x.full_name)+"</td><td>"+esc(x.student_code)+"</td><td>"+total+"</td><td>"+esc(x.group_level||"غير محددة")+"</td><td>"+(x.is_active?"نشط":"موقوف")+"</td><td><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل البيانات</button> <button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف</button></td></tr>"
+ }).join(""):"<tr><td colspan='6'>لا توجد نتائج مطابقة.</td></tr>";
 }
 $("studentManageNameSearch").oninput=renderStudentManagement;$("studentManageCodeSearch").oninput=renderStudentManagement;
-$("studentManagementResults").onclick=async e=>{const b=e.target.closest("[data-delete-student]");if(!b)return;const x=dashboardStudents.find(v=>v.id===b.dataset.deleteStudent);if(!x)return;
- if(!window.confirm("تحذير: سيتم حذف الطالب "+x.full_name+" نهائيًا، مع كل سجلات نقاطه. ستختفي نقاطه من الإجمالي ونتائج التحديات السابقة، ولا يمكن التراجع. هل أنت متأكد؟"))return;
- try{b.disabled=true;b.textContent="جاري الحذف...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+" نهائيًا.");await loadDashboard()}
- catch(err){b.disabled=false;b.textContent="حذف نهائي";msg("studentManagementMessage","تعذر حذف الطالب: "+err.message,true)}
+
+$("studentManagementResults").onclick=async e=>{
+ const edit=e.target.closest("[data-edit-student]");
+ if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentGroup").value=x.group_level||"الملكي";$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
+ const btn=e.target.closest("[data-delete-student]");if(!btn)return;const x=dashboardStudents.find(v=>v.id===btn.dataset.deleteStudent);if(!x)return;
+ if(!window.confirm("هل تريد حذف الطالب "+x.full_name+" نهائيًا؟"))return;
+ try{btn.disabled=true;btn.textContent="جاري التنفيذ...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+".");await loadDashboard()}
+ catch(err){btn.disabled=false;btn.textContent="حذف";msg("studentManagementMessage","تعذر الحذف: "+err.message,true)}
 };
+$("cancelStudentEdit").onclick=()=>{$("editStudentForm").classList.add("hidden");$("editStudentForm").reset()};
+$("editStudentForm").onsubmit=async e=>{
+ e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim(),group=$("editStudentGroup").value;
+ if(!x||!name){msg("studentManagementMessage","راجع اسم الطالب والمجموعة.",true);return}
+ const save=$("editStudentForm").querySelector("button.primary");
+ try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:group});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:group});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث بيانات الطالب بنجاح.");await loadDashboard()}
+ catch(err){msg("studentManagementMessage","تعذر تعديل البيانات: "+err.message,true)}
+ finally{save.disabled=false;save.textContent="حفظ التعديلات"}
+};
+
 function updateManualPointsLabel(){
   const mode=$("manualPointsMode").value;
   $("manualPointsValueLabel").textContent=mode==="set_total"?"الإجمالي الجديد المطلوب":mode==="subtract"?"عدد النقاط المراد خصمها":"عدد النقاط المراد إضافتها";
@@ -299,11 +316,11 @@ $("monthlyEndBtn").onclick=async()=>{
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الشهري: "+e.message,true)}
 };
 $("addStudentForm").onsubmit=async e=>{
- e.preventDefault();const name=$("newStudentName").value.trim();if(!name){msg("addStudentMessage","اكتب اسم الطالب.",true);return}
+ e.preventDefault();const name=$("newStudentName").value.trim(),group=$("newStudentGroup").value;if(!name||!group){msg("addStudentMessage","اكتب اسم الطالب واختر المجموعة.",true);return}
  try{$("addStudentMessage").textContent="جاري إضافة الطالب وتوليد الكود...";
- const r=await db.rpc("admin_create_student",{p_full_name:name});if(r.error)throw r.error;
+ const r=await db.rpc("admin_create_student",{p_full_name:name,p_group_level:group});if(r.error)throw r.error;
  const x=Array.isArray(r.data)?r.data[0]:r.data;if(!x?.student_code)throw Error("لم يصل كود الطالب.");
- $("addStudentForm").reset();msg("addStudentMessage","تمت إضافة "+x.full_name+" بنجاح. كود الطالب: "+x.student_code+" — احتفظ بالكود.");await loadDashboard();
+ $("addStudentForm").reset();msg("addStudentMessage","تمت إضافة "+x.full_name+" إلى مجموعة "+group+". كود الطالب: "+x.student_code+" — احتفظ بالكود.");await loadDashboard();
  }catch(err){msg("addStudentMessage","تعذر إضافة الطالب: "+err.message,true)}
 };
 
