@@ -41,3 +41,178 @@
 .student-editor .actions{margin-top:6px}
 .student-target-group{margin-top:7px!important;color:var(--green-deep)!important;font-size:13px!important}
 .dark .student-editor{background:#20392d}
+
+
+/* ===== Safwat Elhofaz visual refinement ===== */
+:root{
+ --shadow:0 14px 38px rgba(18,65,45,.075);
+ --shadow-hover:0 20px 46px rgba(18,65,45,.13);
+}
+body{
+ background:
+  radial-gradient(ellipse at 8% 12%,rgba(181,139,59,.075),transparent 28%),
+  radial-gradient(ellipse at 92% 34%,rgba(23,99,68,.07),transparent 30%),
+  var(--bg);
+}
+.topbar{
+ position:relative;z-index:5;height:84px;max-width:1160px;
+ border-bottom:1px solid rgba(181,139,59,.22);
+}
+.brand{gap:14px}
+.brand .mark{
+ display:grid;place-items:center;width:48px;height:48px;border-radius:16px;
+ background:linear-gradient(145deg,#fffdf7,#f1ead8);
+ border:1px solid var(--gold-light);font-size:29px;
+ box-shadow:0 6px 18px rgba(181,139,59,.12);
+}
+.brand b{font-size:17px;letter-spacing:.1px}
+.brand small{margin-top:1px;letter-spacing:.3px}
+.theme{width:44px;height:44px;padding:0;border-radius:14px;font-size:19px}
+main{max-width:1120px;margin:34px auto 56px;padding:0 24px}
+.hero{
+ min-height:490px;padding:76px 8%;border-radius:30px;
+ border:1px solid rgba(181,139,59,.3);
+ background:
+  radial-gradient(ellipse at 12% 18%,rgba(181,139,59,.12),transparent 35%),
+  linear-gradient(115deg,rgba(234,242,236,.72),transparent 58%),
+  var(--surface);
+ box-shadow:0 24px 65px rgba(24,57,44,.09);
+}
+.hero:before{
+ inset:26px auto 26px 0;width:4px;border-radius:0 8px 8px 0;
+ background:linear-gradient(180deg,var(--gold),rgba(181,139,59,.08));
+}
+.hero .eyebrow{
+ display:inline-flex;align-items:center;gap:8px;padding:7px 13px;
+ border:1px solid var(--gold-light);border-radius:99px;background:rgba(255,255,255,.55);
+}
+.hero h1{position:relative;z-index:1;font-size:clamp(48px,6.8vw,78px);line-height:1.24;margin:24px 0 16px;letter-spacing:-1.5px}
+.hero p{position:relative;z-index:1;max-width:520px;font-size:16px;line-height:2.1}
+.actions{position:relative;z-index:1;gap:13px;margin-top:27px}
+.primary,.secondary{
+ min-height:48px;padding:12px 23px;border-radius:14px;
+ box-shadow:0 7px 18px rgba(23,99,68,.1);
+}
+.primary{background:linear-gradient(135deg,#247650,#104b35);border-color:rgba(181,139,59,.65)}
+.secondary{background:linear-gradient(145deg,#fffefa,#f8f5eb);border-color:rgba(181,139,59,.42)}
+.seal{left:8%;top:12%;font-size:270px;color:rgba(181,139,59,.055)}
+.motto{position:relative;z-index:1;margin-top:48px;font-size:12px;letter-spacing:.35px}
+.content,.panel,.stats article{
+ border-radius:22px;border-color:rgba(181,139,59,.2);
+ box-shadow:var(--shadow);
+}
+.content{padding:25px;margin-bottom:19px}
+.content h3{font-size:18px;margin-bottom:16px}
+.panel{padding:32px}
+.panel h2{color:var(--green-deep);margin-top:0}
+.stack{gap:11px}
+.stack input,.stack select,.search-pair input,.date-range input,.weekly-controls select,.lookup-form input{
+ border-radius:13px;min-height:47px;border-color:var(--line);
+ transition:border-color .2s,box-shadow .2s,background .2s;
+}
+.stack input:focus,.stack select:focus,.search-pair input:focus,.lookup-form input:focus{
+ border-color:var(--gold);box-shadow:0 0 0 4px rgba(181,139,59,.12);outline:none;
+}
+.dashhead{padding:8px 2px 18px;border-bottom:1px solid var(--line)}
+.dashhead h2{font-size:27px;margin:4px 0}
+.stats{gap:16px;margin:18px 0}
+.stats article{
+ position:relative;overflow:hidden;padding:21px 22px;
+ background:linear-gradient(145deg,var(--surface),rgba(234,242,236,.58));
+}
+.stats article:after{
+ content:"";position:absolute;inset:auto -18px -30px auto;width:95px;height:95px;
+ border:1px solid rgba(181,139,59,.2);border-radius:50%;
+}
+.stats span{font-weight:600}
+.stats strong{font-size:34px;position:relative;z-index:1}
+.admin-grid{gap:17px}
+.period-card,.leaderboard-card{
+ border-radius:19px;border-color:rgba(181,139,59,.25);
+ box-shadow:0 7px 20px rgba(24,57,44,.035);
+}
+.period-card{padding:21px}
+.content+.content{margin-top:18px}
+.table-wrap{border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+table{font-size:13px}
+td,th{padding:13px 14px}
+th{background:rgba(234,242,236,.55);font-weight:800;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(234,242,236,.65)}
+.history-btn,.danger-btn,.student-match{border-radius:11px;transition:all .2s}
+.history-btn{padding:8px 12px}
+.danger-btn{padding:8px 12px}
+.student-editor{border-radius:18px;padding:21px}
+.leaderboard-section{padding:28px;margin-top:22px}
+.leaderboard-heading{margin-bottom:23px}
+.leaderboard-heading h2{font-size:26px}
+.leaderboard-grid{gap:18px}
+.leaderboard-card{padding:20px;background:linear-gradient(145deg,var(--green-soft),var(--surface))}
+.leaderboard-card-head h3{font-size:18px}
+.leaderboard-table th{background:transparent}
+.leaderboard-rank{min-width:31px;height:31px;border-radius:10px}
+.leaderboard-rank.rank-1{box-shadow:inset 0 0 0 1px rgba(181,139,59,.45)}
+.leaderboard-select{height:45px;border-radius:12px;padding:0 13px}
+.student-profile{padding-top:8px}
+.student-profile-head{padding:20px;border:1px solid var(--line);border-radius:19px;background:linear-gradient(120deg,var(--green-soft),var(--surface))}
+.student-stats-grid{gap:13px}
+.student-stats-grid article,.student-progress-card{
+ border-radius:17px;border-color:rgba(181,139,59,.22);box-shadow:0 8px 22px rgba(24,57,44,.04);
+}
+.student-stats-grid article{padding:19px}
+.student-stats-grid article strong{font-size:30px}
+.student-progress-card{padding:20px}
+.progress-track{height:12px;border:1px solid rgba(181,139,59,.2)}
+.student-profile-actions button{min-height:48px}
+footer{margin-top:55px;background:rgba(234,242,236,.25);border-color:rgba(181,139,59,.18);font-weight:700}
+footer small{font-weight:400}
+button{ -webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{
+ outline:3px solid rgba(181,139,59,.38);outline-offset:3px;
+}
+button:disabled{opacity:.6;cursor:wait}
+.dark body{background:radial-gradient(ellipse at 10% 10%,rgba(181,139,59,.07),transparent 30%),var(--bg)}
+.dark .hero{
+ background:radial-gradient(ellipse at 12% 18%,rgba(215,182,107,.1),transparent 36%),linear-gradient(120deg,#1d3328,#14221b);
+ border-color:#d7b66b40;
+}
+.dark .hero .eyebrow{background:#1b2a21}
+.dark .stats article{background:linear-gradient(145deg,#1d3328,#14221b)}
+.dark th{background:rgba(32,57,45,.65)}
+.dark tbody tr:hover{background:#20392d}
+.dark .leaderboard-card{background:linear-gradient(145deg,#20392d,#192a22)}
+.dark .student-profile-head{background:linear-gradient(120deg,#20392d,#192a22)}
+.dark footer{background:rgba(32,57,45,.2)}
+@media(max-width:700px){
+ .topbar{height:72px;padding:0 16px}
+ .brand .mark{width:43px;height:43px}
+ main{margin:20px auto 38px;padding:0 14px}
+ .hero{min-height:0;padding:48px 24px 38px;border-radius:24px}
+ .hero h1{font-size:clamp(42px,11vw,57px);margin:21px 0 12px}
+ .hero p{font-size:14px;max-width:100%}
+ .hero .actions{display:grid;grid-template-columns:1fr;gap:10px}
+ .hero .actions button{width:100%}
+ .seal{font-size:170px;top:29%;left:2%}
+ .motto{margin-top:34px}
+ .content{padding:18px;border-radius:19px}
+ .leaderboard-section{padding:18px}
+ .leaderboard-heading h2{font-size:20px}
+ .leaderboard-card{padding:15px}
+ .panel{padding:22px 18px}
+ .stats{gap:10px}
+ .stats article{padding:15px}
+ .stats strong{font-size:27px}
+ .dashhead h2{font-size:23px}
+ .date-range{gap:8px}
+ td,th{padding:10px 9px}
+}
+@media(max-width:390px){
+ .stats{grid-template-columns:1fr}
+ .stats article:last-child{grid-column:auto}
+ .hero h1{font-size:40px}
+ .student-stats-grid{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:no-preference){
+ .content,.leaderboard-card,.period-card,.student-progress-card{transition:transform .22s ease,box-shadow .22s ease}
+ .leaderboard-card:hover,.period-card:hover,.student-progress-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+}
