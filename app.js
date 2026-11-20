@@ -23,7 +23,34 @@ $("studentOpen").onclick=()=>show("studentView");
 $("adminOpen").onclick=()=>show("adminLoginView");
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>show("homeView"));
 $("themeToggle").onclick=()=>document.body.classList.toggle("dark");
-$("studentForm").onsubmit=e=>{e.preventDefault();const ok=/^\d{5}$/.test($("studentCode").value.trim());msg("studentMessage",ok?"الاستعلام الآمن قيد التجهيز، ولم نفتح عرض بيانات الطلاب بعد.":"الكود لازم يكون خمسة أرقام.",!ok)};
+$("studentForm").onsubmit=async e=>{
+ e.preventDefault();const code=$("studentCode").value.trim();
+ if(!/^\\d{5}$/.test(code)){msg("studentMessage","الكود لازم يكون خمسة أرقام.",true);return}
+ const button=$("studentForm").querySelector("button");button.disabled=true;button.textContent="جاري البحث...";
+ msg("studentMessage","جاري التحقق من الكود...");
+ try{
+  const {data,error}=await db.rpc("student_lookup_by_code",{p_student_code:code});if(error)throw error;
+  const result=Array.isArray(data)?data[0]:data;
+  if(!result||!result.student){msg("studentMessage","الكود غير صحيح أو غير مسجل.",true);return}
+  renderStudentProfile(result);$("studentForm").classList.add("hidden");$("studentProfile").classList.remove("hidden");$("studentMessage").textContent="";
+ }catch(err){msg("studentMessage",err.message||"تعذر تنفيذ الاستعلام حاليًا.",true)}
+ finally{button.disabled=false;button.textContent="عرض صفحتي ←"}
+};
+function renderStudentProfile(data){
+ const s=data.student,monthly=data.monthly,weekly=data.weekly,total=Number(s.total_points)||0,next=s.next_level_points==null?null:Number(s.next_level_points);
+ const base=total>=300?300:total>=250?250:total>=200?200:total>=150?150:total>=100?100:total>=75?75:0;
+ const progress=next===null?100:Math.max(0,Math.min(100,((total-base)/(next-base))*100));
+ $("studentProfile").innerHTML=`
+  <div class="student-profile-head"><div><span class="eyebrow">صفحة الطالب</span><h2>${esc(s.full_name)}</h2><p>كود الطالب: <b>${esc(s.student_code)}</b></p></div><span class="student-level-pill">${esc(s.level)}</span></div>
+  <div class="student-stats-grid"><article><span>إجمالي نقاطك</span><strong>${total}</strong></article><article><span>ترتيبك داخل مستواك</span><strong>${Number(s.level_rank)||"—"} <small>من ${Number(s.level_size)||0}</small></strong></article><article><span>ترتيبك العام في المركز</span><strong>${Number(s.overall_rank)||"—"} <small>من ${Number(s.overall_size)||0}</small></strong></article></div>
+  <section class="student-progress-card"><h3>تقدمك للمستوى التالي</h3><div class="progress-label"><span>${next===null?"وصلت لأعلى مستوى":"المستوى التالي: "+esc(s.next_level)}</span><b>${next===null?"مكتمل":total+" / "+next+" نقطة"}</b></div><div class="progress-track"><span style="width:${progress}%"></span></div><p>${next===null?"وصلت إلى أعلى مستوى في النظام.":"متبقي لك "+Math.max(0,next-total)+" نقطة للوصول للمستوى التالي."}</p></section>
+  <div class="student-challenges-grid">
+   <section class="student-progress-card"><h3>التحدي الشهري</h3>${monthly?`<b>${esc(monthly.title||"التحدي الشهري")}</b><p>نقاطك: <strong>${Number(monthly.total_points)||0}</strong></p><p>ترتيبك في التحدي: <strong>${Number(monthly.rank)||"—"}</strong></p><small>بداية التحدي: ${dateText(String(monthly.month_start||"").slice(0,10))}</small>`:"<p>لا يوجد تحدٍ شهري نشط حاليًا.</p>"}</section>
+   <section class="student-progress-card"><h3>التحدي الأسبوعي</h3>${weekly?`<b>${esc(weekly.title||("الأسبوع "+weekly.week_number))}</b><p>نقاطك: <strong>${Number(weekly.total_points)||0}</strong></p><p>ترتيبك في التحدي: <strong>${Number(weekly.rank)||"—"}</strong></p><small>من ${dateText(String(weekly.week_start||"").slice(0,10))} إلى ${dateText(String(weekly.week_end||"").slice(0,10))}</small>`:"<p>لا يوجد تحدٍ أسبوعي نشط حاليًا.</p>"}</section>
+  </div><div class="student-profile-actions"><button type="button" class="secondary" id="studentPrintBtn">طباعة / حفظ PDF</button><button type="button" class="primary" id="studentLookupAgain">استعلام بكود آخر</button></div>`;
+ $("studentLookupAgain").onclick=()=>{$("studentProfile").classList.add("hidden");$("studentForm").classList.remove("hidden");$("studentCode").value="";$("studentMessage").textContent="";$("studentCode").focus()};
+ $("studentPrintBtn").onclick=()=>window.print();
+}
 async function routeAdmin(user){
   const a=await db.from("admin_profiles").select("username,display_name,is_active,must_change_password").eq("user_id",user.id).maybeSingle();
   if(a.error||!a.data||!a.data.is_active){await db.auth.signOut();throw Error("هذا الحساب غير معتمد كمشرف.")}
