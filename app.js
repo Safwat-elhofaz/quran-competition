@@ -8,7 +8,7 @@ let pendingAdmin=null;
 let dashboardStudents=[];
 let dashboardRanked=[];
 let dashboardRankById=new Map();
-function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"})}
+function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"});if(id==="homeView")loadPublicLeaderboards()}
 function msg(id,t,bad=false){$(id).textContent=t;$(id).style.color=bad?"#f1a39a":"#b58b3b"}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function level(points){let current=null;for(const item of levels){if(points>=item.points)current=item;else break}return current?.name||"بدون مستوى"}
@@ -19,6 +19,34 @@ async function activeMonthly(){const r=await db.from("competitions").select("id,
 async function activeWeekly(){const r=await db.from("weekly_challenges").select("id,competition_id,week_number,week_start,week_end,title,status,created_at").eq("status","active").maybeSingle();if(r.error)throw r.error;return r.data}
 async function writeAudit(user,action,type,id,details={}){const r=await db.from("admin_audit_logs").insert({admin_user_id:user.id,action,entity_type:type,entity_id:id?String(id):null,details});if(r.error)throw r.error}
 function dateText(value){if(!value)return "—";return new Date(value+"T00:00:00").toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"})}
+
+let publicLeaderboardData=null;
+function leaderboardRows(rows){
+ if(!rows?.length)return '<tr><td colspan="3" class="leaderboard-empty">لا يوجد طلاب في هذا المستوى حتى الآن.</td></tr>';
+ return rows.map(x=>'<tr><td><span class="leaderboard-rank rank-'+x.rank+'">'+x.rank+'</span></td><td class="leaderboard-student">'+esc(x.name)+'</td><td class="leaderboard-points">'+Number(x.points).toLocaleString("en-US")+'</td></tr>').join("");
+}
+function renderLevelLeaderboard(){
+ const levelName=$("leaderboardLevelSelect").value;
+ const rows=publicLeaderboardData?.levels?.[levelName]||[];
+ $("levelLeaderboard").innerHTML=leaderboardRows(rows);
+}
+async function loadPublicLeaderboards(){
+ if(!$("overallLeaderboard"))return;
+ $("leaderboardMessage").textContent="";
+ try{
+  const {data,error}=await db.rpc("public_leaderboards");
+  if(error)throw error;
+  publicLeaderboardData=data||{overall:[],levels:{}};
+  $("overallLeaderboard").innerHTML=leaderboardRows(publicLeaderboardData.overall||[]);
+  renderLevelLeaderboard();
+ }catch(error){
+  $("overallLeaderboard").innerHTML='<tr><td colspan="3" class="leaderboard-empty">تعذر تحميل الترتيب حاليًا.</td></tr>';
+  $("levelLeaderboard").innerHTML='<tr><td colspan="3" class="leaderboard-empty">تعذر تحميل الترتيب حاليًا.</td></tr>';
+  $("leaderboardMessage").textContent="تأكد من اتصال الإنترنت وحاول تحديث الصفحة.";
+ }
+}
+$("leaderboardLevelSelect").onchange=renderLevelLeaderboard;
+
 $("studentOpen").onclick=()=>show("studentView");
 $("adminOpen").onclick=()=>show("adminLoginView");
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>show("homeView"));
@@ -279,4 +307,5 @@ $("addStudentForm").onsubmit=async e=>{
  }catch(err){msg("addStudentMessage","تعذر إضافة الطالب: "+err.message,true)}
 };
 
+loadPublicLeaderboards();
 (async()=>{const r=await db.auth.getSession();if(r.data.session){try{await routeAdmin(r.data.session.user)}catch(e){await db.auth.signOut()}}})();
