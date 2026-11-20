@@ -99,6 +99,17 @@ async function loadManualAdjustmentHistory(students,admins){
     return "<tr><td>"+new Date(x.created_at).toLocaleString("ar-EG")+"</td><td>"+(student?esc(student.full_name)+" ("+esc(student.student_code)+")":"طالب")+"</td><td>"+change+"</td><td>"+before+" ← "+after+"</td><td>"+esc(d.adjustment_reason||"—")+"</td><td>"+esc(adminMap.get(x.admin_user_id)||"مشرف")+"</td></tr>";
   }).join(""):'<tr><td colspan="6">لا توجد تعديلات يدوية حتى الآن</td></tr>';
 }
+function renderStudentManagement(){
+ const name=$("studentManageNameSearch").value.trim().toLocaleLowerCase("ar"),code=$("studentManageCodeSearch").value.trim();
+ const rows=dashboardStudents.filter(x=>(!name||x.full_name.toLocaleLowerCase("ar").includes(name))&&(!code||x.student_code.includes(code)));
+ $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);return "<tr><td>"+esc(x.full_name)+"</td><td>"+esc(x.student_code)+"</td><td>"+total+"</td><td>"+(x.is_active?"نشط":"موقوف")+"</td><td><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف نهائي</button></td></tr>"}).join(""):"<tr><td colspan='5'>لا توجد نتائج مطابقة.</td></tr>";
+}
+$("studentManageNameSearch").oninput=renderStudentManagement;$("studentManageCodeSearch").oninput=renderStudentManagement;
+$("studentManagementResults").onclick=async e=>{const b=e.target.closest("[data-delete-student]");if(!b)return;const x=dashboardStudents.find(v=>v.id===b.dataset.deleteStudent);if(!x)return;
+ if(!window.confirm("تحذير: سيتم حذف الطالب "+x.full_name+" نهائيًا، مع كل سجلات نقاطه. ستختفي نقاطه من الإجمالي ونتائج التحديات السابقة، ولا يمكن التراجع. هل أنت متأكد؟"))return;
+ try{b.disabled=true;b.textContent="جاري الحذف...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+" نهائيًا.");await loadDashboard()}
+ catch(err){b.disabled=false;b.textContent="حذف نهائي";msg("studentManagementMessage","تعذر حذف الطالب: "+err.message,true)}
+};
 function updateManualPointsLabel(){
   const mode=$("manualPointsMode").value;
   $("manualPointsValueLabel").textContent=mode==="set_total"?"الإجمالي الجديد المطلوب":mode==="subtract"?"عدد النقاط المراد خصمها":"عدد النقاط المراد إضافتها";
@@ -107,24 +118,25 @@ function updateManualPointsLabel(){
   updateManualPointsPreview();
 }
 function resetManualStudentLookup(){
-  $("manualPointsStudentId").value="";$("manualPointsStudentInfo").textContent="اكتب كود الطالب ثم اضغط بحث للتأكد من هويته.";
-  $("manualPointsStudentInfo").classList.remove("found");updateManualPointsPreview();
+ $("manualPointsStudentId").value="";$("manualPointsStudentInfo").textContent="ابحث بالاسم أو الكود، ثم اختر الطالب من النتائج.";$("manualPointsStudentInfo").classList.remove("found");updateManualPointsPreview();
 }
-function findManualStudent(){
-  const code=$("manualPointsCode").value.trim();
-  if(!/^\d{5}$/.test(code)){resetManualStudentLookup();msg("manualPointsMessage","كود الطالب يجب أن يتكون من خمسة أرقام.",true);return}
-  const student=dashboardStudents.find(x=>x.student_code===code&&x.is_active);
-  if(!student){resetManualStudentLookup();msg("manualPointsMessage","لم يتم العثور على طالب نشط بهذا الكود.",true);return}
-  $("manualPointsStudentId").value=student.id;
-  $("manualPointsStudentInfo").textContent=student.full_name+" — كود "+student.student_code;
-  $("manualPointsStudentInfo").classList.add("found");msg("manualPointsMessage","تم العثور على الطالب.");updateManualPointsPreview();
+function renderPointsStudentMatches(){
+ const name=$("manualPointsNameSearch").value.trim().toLocaleLowerCase("ar"),code=$("manualPointsCodeSearch").value.trim();
+ $("manualPointsStudentId").value="";$("manualPointsStudentInfo").textContent="اختار الطالب من نتائج البحث قبل تعديل النقاط.";$("manualPointsStudentInfo").classList.remove("found");updateManualPointsPreview();
+ if(!name&&!code){$("pointsStudentResults").innerHTML="";return}
+ const matches=dashboardStudents.filter(x=>x.is_active&&(!name||x.full_name.toLocaleLowerCase("ar").includes(name))&&(!code||x.student_code.includes(code))).slice(0,30);
+ $("pointsStudentResults").innerHTML=matches.length?matches.map(x=>"<button type='button' class='student-match' data-student-id='"+x.id+"'><b>"+esc(x.full_name)+"</b><span>الكود: "+esc(x.student_code)+"</span></button>").join(""):"<p class='muted-note'>مفيش طالب مطابق لبيانات البحث.</p>";
 }
-$("manualPointsFind").onclick=findManualStudent;
-$("manualPointsCode").oninput=resetManualStudentLookup;
+function selectManualPointsStudent(id){
+ const x=dashboardStudents.find(v=>v.id===id&&v.is_active);if(!x)return;
+ $("manualPointsStudentId").value=x.id;$("manualPointsStudentInfo").textContent=x.full_name+" — كود "+x.student_code+" — الإجمالي الحالي "+Number(dashboardRanked.find(v=>v.student_id===id)?.total_points||0)+" نقطة";$("manualPointsStudentInfo").classList.add("found");$("pointsStudentResults").innerHTML="";updateManualPointsPreview();
+}
+$("manualPointsNameSearch").oninput=renderPointsStudentMatches;$("manualPointsCodeSearch").oninput=renderPointsStudentMatches;
+$("pointsStudentResults").onclick=e=>{const b=e.target.closest("[data-student-id]");if(b)selectManualPointsStudent(b.dataset.studentId)};
 function updateManualPointsPreview(){
   const id=$("manualPointsStudentId").value,mode=$("manualPointsMode").value,value=Number($("manualPointsValue").value);
   const current=Number(dashboardRanked.find(x=>x.student_id===id)?.total_points||0);
-  if(!id){$("manualPointsPreview").textContent="ابحث بكود الطالب وحدد نوع التعديل لعرض معاينة النقاط.";return}
+  if(!id){$("manualPointsPreview").textContent="ابحث عن الطالب بالاسم أو الكود وحدده لعرض معاينة النقاط.";return}
   if($("manualPointsValue").value===""||!Number.isInteger(value)||value<0||(mode!=="set_total"&&value===0)){
     $("manualPointsPreview").textContent="إجمالي الطالب الحالي: "+current+" نقطة.";return
   }
@@ -132,12 +144,12 @@ function updateManualPointsPreview(){
   $("manualPointsPreview").textContent="الإجمالي الحالي: "+current+" نقطة — بعد التعديل: "+next+" نقطة.";
 }
 $("manualPointsMode").onchange=updateManualPointsLabel;
-$("manualPointsCode").onchange=resetManualStudentLookup;
+
 $("manualPointsValue").oninput=updateManualPointsPreview;
 $("manualPointsForm").onsubmit=async e=>{
   e.preventDefault();
   const student=$("manualPointsStudentId").value,mode=$("manualPointsMode").value,value=Number($("manualPointsValue").value);
-  if(!student||dashboardStudents.find(x=>x.id===student)?.student_code!==$("manualPointsCode").value.trim()){msg("manualPointsMessage","ابحث بكود الطالب وتأكد من ظهوره قبل تنفيذ التعديل.",true);return}
+  if(!student||!dashboardStudents.find(x=>x.id===student&&x.is_active)){msg("manualPointsMessage","ابحث عن الطالب واختره من النتائج قبل تنفيذ التعديل.",true);return}
   if(!student||!Number.isInteger(value)||value<0||(mode!=="set_total"&&value===0)){
     msg("manualPointsMessage","راجع اختيار الطالب وعدد النقاط.",true);return
   }
@@ -153,17 +165,6 @@ $("manualPointsForm").onsubmit=async e=>{
     msg("manualPointsMessage",result.points_delta===0?"الإجمالي بالفعل يساوي القيمة المطلوبة، لم يحدث تغيير.":"تم التعديل بنجاح. الإجمالي: "+result.previous_total+" ← "+result.new_total+" نقطة.");
     await loadDashboard();
   }catch(err){msg("manualPointsMessage","تعذر تعديل النقاط: "+err.message,true)}
-};
-$("studentLookupForm").onsubmit=e=>{
-  e.preventDefault();
-  const code=$("studentLookupCode").value.trim();
-  if(!/^\d{5}$/.test(code)){msg("studentLookupMessage","كود الطالب يجب أن يتكون من خمسة أرقام.",true);return}
-  const student=dashboardStudents.find(x=>x.student_code===code);
-  if(!student){$("studentLookupResult").classList.add("hidden");msg("studentLookupMessage","لم يتم العثور على طالب بهذا الكود.",true);return}
-  const total=dashboardRanked.find(x=>x.student_id===student.id)?.total_points||0;
-  const rank=dashboardRankById.get(student.id)||"—";
-  $("studentLookupResult").innerHTML="<strong>"+esc(student.full_name)+"</strong><span>كود الطالب: "+esc(student.student_code)+"</span><span>إجمالي النقاط: "+total+"</span><span>المستوى: "+level(total)+"</span><span>الترتيب العام: "+rank+"</span><span>الحالة: "+(student.is_active?"نشط":"موقوف")+"</span>";
-  $("studentLookupResult").classList.remove("hidden");msg("studentLookupMessage","");
 };
 function weekName(n){return ["","الأول","الثاني","الثالث","الرابع","الخامس"][n]||String(n)}
 function renderPeriodControls(monthly,weekly){
@@ -245,17 +246,12 @@ $("monthlyEndBtn").onclick=async()=>{
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الشهري: "+e.message,true)}
 };
 $("addStudentForm").onsubmit=async e=>{
-  e.preventDefault();const code=$("newStudentCode").value.trim();if(!/^\d{5}$/.test(code)){msg("addStudentMessage","الكود يجب أن يكون خمسة أرقام.",true);return}
-  const r=await db.from("students").insert({full_name:$("newStudentName").value.trim(),student_code:code});
-  if(r.error){msg("addStudentMessage",r.error.code==="23505"?"الكود مستخدم بالفعل.":"تعذر الحفظ: "+r.error.message,true);return}
-  $("addStudentForm").reset();msg("addStudentMessage","تمت إضافة الطالب بنجاح.");await loadDashboard()
+ e.preventDefault();const name=$("newStudentName").value.trim();if(!name){msg("addStudentMessage","اكتب اسم الطالب.",true);return}
+ try{$("addStudentMessage").textContent="جاري إضافة الطالب وتوليد الكود...";
+ const r=await db.rpc("admin_create_student",{p_full_name:name});if(r.error)throw r.error;
+ const x=Array.isArray(r.data)?r.data[0]:r.data;if(!x?.student_code)throw Error("لم يصل كود الطالب.");
+ $("addStudentForm").reset();msg("addStudentMessage","تمت إضافة "+x.full_name+" بنجاح. كود الطالب: "+x.student_code+" — احتفظ بالكود.");await loadDashboard();
+ }catch(err){msg("addStudentMessage","تعذر إضافة الطالب: "+err.message,true)}
 };
-$("addPointsForm").onsubmit=async e=>{
-  e.preventDefault();const n=Number($("pointsValue").value),student=$("pointsStudent").value;
-  if(!student||!Number.isInteger(n)||n===0){msg("pointsMessage","اختر طالبًا وأدخل نقاطًا صحيحة غير صفر.",true);return}
-  try{const [user,monthly,weekly]=await Promise.all([currentAdmin(),activeMonthly(),activeWeekly()]);
-    const r=await db.from("point_entries").insert({student_id:student,points_delta:n,competition_id:monthly?.id??null,weekly_challenge_id:weekly?.id??null,created_by:user.id,entry_type:"session"});if(r.error)throw r.error;
-    $("addPointsForm").reset();msg("pointsMessage","تم تسجيل النقاط وإضافتها إلى الإجمالي التراكمي.");await loadDashboard()
-  }catch(e){msg("pointsMessage","تعذر تسجيل النقاط: "+e.message,true)}
-};
+
 (async()=>{const r=await db.auth.getSession();if(r.data.session){try{await routeAdmin(r.data.session.user)}catch(e){await db.auth.signOut()}}})();
