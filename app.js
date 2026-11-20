@@ -164,7 +164,7 @@ $("studentManageNameSearch").oninput=renderStudentManagement;$("studentManageCod
 
 $("studentManagementResults").onclick=async e=>{
  const edit=e.target.closest("[data-edit-student]");
- if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentGroup").value=x.group_level||"الملكي";$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
+ if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentGroup").value=x.group_level||"";$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
  const btn=e.target.closest("[data-delete-student]");if(!btn)return;const x=dashboardStudents.find(v=>v.id===btn.dataset.deleteStudent);if(!x)return;
  if(!window.confirm("هل تريد حذف الطالب "+x.full_name+" نهائيًا؟"))return;
  try{btn.disabled=true;btn.textContent="جاري التنفيذ...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+".");await loadDashboard()}
