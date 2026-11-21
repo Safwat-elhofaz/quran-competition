@@ -68,16 +68,62 @@ function renderStudentProfile(data){
  const s=data.student,monthly=data.monthly,weekly=data.weekly,total=Number(s.total_points)||0,next=s.next_level_points==null?null:Number(s.next_level_points);
  const base=total>=300?300:total>=250?250:total>=200?200:total>=150?150:total>=100?100:total>=75?75:0;
  const progress=next===null?100:Math.max(0,Math.min(100,((total-base)/(next-base))*100));
+ const weeklyPoints=Number(weekly?.total_points)||0,monthlyPoints=Number(monthly?.total_points)||0;
+ const maxChallenge=Math.max(weeklyPoints,monthlyPoints,1);
+ const tiers=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300]];
+ const tiersHtml=tiers.map(([name,points])=>'<div class="student-tier '+(total>=points?'is-reached':'')+'"><i></i><span>'+name+'</span><b>'+points+'</b></div>').join("");
  $("studentProfile").innerHTML=`
-  <div class="student-profile-head"><div><span class="eyebrow">صفحة الطالب</span><h2>${esc(s.full_name)}</h2><p>كود الطالب: <b>${esc(s.student_code)}</b></p><p class="student-target-group">المجموعة المستهدفة: <b>${esc(s.group_level||"لم تُحدد بعد")}</b></p></div><span class="student-level-pill">مستوى النقاط: ${esc(s.level)}</span></div>
-  <div class="student-stats-grid"><article><span>إجمالي نقاطك</span><strong>${total}</strong></article><article><span>ترتيبك داخل مستواك</span><strong>${Number(s.level_rank)||"—"} <small>من ${Number(s.level_size)||0}</small></strong></article><article><span>ترتيبك العام في المركز</span><strong>${Number(s.overall_rank)||"—"} <small>من ${Number(s.overall_size)||0}</small></strong></article></div>
-  <section class="student-progress-card"><h3>تقدمك للمستوى التالي</h3><div class="progress-label"><span>${next===null?"وصلت لأعلى مستوى":"المستوى التالي: "+esc(s.next_level)}</span><b>${next===null?"مكتمل":total+" / "+next+" نقطة"}</b></div><div class="progress-track"><span style="width:${progress}%"></span></div><p>${next===null?"وصلت إلى أعلى مستوى في النظام.":"متبقي لك "+Math.max(0,next-total)+" نقطة للوصول للمستوى التالي."}</p></section>
-  <div class="student-challenges-grid">
-   <section class="student-progress-card"><h3>التحدي الشهري</h3>${monthly?`<b>${esc(monthly.title||"التحدي الشهري")}</b><p>نقاطك: <strong>${Number(monthly.total_points)||0}</strong></p><p>ترتيبك في التحدي: <strong>${Number(monthly.rank)||"—"}</strong></p><small>بداية التحدي: ${dateText(String(monthly.month_start||"").slice(0,10))}</small>`:"<p>لا يوجد تحدٍ شهري نشط حاليًا.</p>"}</section>
-   <section class="student-progress-card"><h3>التحدي الأسبوعي</h3>${weekly?`<b>${esc(weekly.title||("الأسبوع "+weekly.week_number))}</b><p>نقاطك: <strong>${Number(weekly.total_points)||0}</strong></p><p>ترتيبك في التحدي: <strong>${Number(weekly.rank)||"—"}</strong></p><small>من ${dateText(String(weekly.week_start||"").slice(0,10))} إلى ${dateText(String(weekly.week_end||"").slice(0,10))}</small>`:"<p>لا يوجد تحدٍ أسبوعي نشط حاليًا.</p>"}</section>
-  </div><div class="student-profile-actions"><button type="button" class="secondary" id="studentPrintBtn">طباعة / حفظ PDF</button><button type="button" class="primary" id="studentLookupAgain">استعلام بكود آخر</button></div>`;
+  <div class="student-report" id="studentReport">
+   <div class="student-report-cover">
+    <div class="student-report-brand"><span>۞</span><div><b>صفوة الحفاظ</b><small>تقرير إنجاز الطالب</small></div></div>
+    <div class="student-profile-head"><div><span class="eyebrow">صفحة الطالب</span><h2>${esc(s.full_name)}</h2><p>كود الطالب: <b>${esc(s.student_code)}</b></p><p class="student-target-group">المجموعة المستهدفة: <b>${esc(s.group_level||"لم تُحدد بعد")}</b></p></div><span class="student-level-pill">مستوى النقاط: ${esc(s.level)}</span></div>
+    <div class="student-report-total"><span>إجمالي نقاطك</span><strong>${total.toLocaleString("en-US")}</strong><small>بالقرآن نرتقي، وبالإتقان نتميز</small></div>
+   </div>
+   <div class="student-stats-grid"><article><span>ترتيبك داخل مستواك</span><strong>${Number(s.level_rank)||"—"} <small>من ${Number(s.level_size)||0}</small></strong></article><article><span>ترتيبك العام في المركز</span><strong>${Number(s.overall_rank)||"—"} <small>من ${Number(s.overall_size)||0}</small></strong></article><article><span>المجموعة المستهدفة</span><strong class="student-group-value">${esc(s.group_level||"—")}</strong></article></div>
+   <section class="student-progress-card student-tier-card"><h3>مستوياتك وتقدمك</h3><div class="student-tier-scale">${tiersHtml}</div><div class="progress-label"><span>${next===null?"وصلت لأعلى مستوى":"المستوى التالي: "+esc(s.next_level)}</span><b>${next===null?"مكتمل":total+" / "+next+" نقطة"}</b></div><div class="progress-track"><span style="width:${progress}%"></span></div><p>${next===null?"ما شاء الله! وصلت إلى أعلى مستوى في نظام النقاط.":"متبقي لك "+Math.max(0,next-total)+" نقطة للوصول للمستوى التالي."}</p></section>
+   <section class="student-progress-card"><h3>نشاطك في التحديات</h3><p class="student-chart-note">مقارنة نقاطك المسجلة في التحدي الأسبوعي والشهري النشط</p><div class="student-bars">
+    <div class="student-bar-row"><span>الأسبوعي</span><div class="student-bar-track"><i style="width:${weeklyPoints/maxChallenge*100}%"></i></div><b>${weeklyPoints}</b></div>
+    <div class="student-bar-row"><span>الشهري</span><div class="student-bar-track monthly"><i style="width:${monthlyPoints/maxChallenge*100}%"></i></div><b>${monthlyPoints}</b></div>
+   </div><div class="student-challenge-cards">
+    <div><span>التحدي الأسبوعي</span><b>${weekly?esc(weekly.title||("الأسبوع "+weekly.week_number)):"لا يوجد تحدٍ نشط"}</b><small>ترتيبك: ${weekly?Number(weekly.rank)||"—":"—"} · نقاطك: ${weeklyPoints}</small>${weekly?'<small>من '+dateText(String(weekly.week_start||"").slice(0,10))+' إلى '+dateText(String(weekly.week_end||"").slice(0,10))+'</small>':""}</div>
+    <div><span>التحدي الشهري</span><b>${monthly?esc(monthly.title||"التحدي الشهري"):"لا يوجد تحدٍ نشط"}</b><small>ترتيبك: ${monthly?Number(monthly.rank)||"—":"—"} · نقاطك: ${monthlyPoints}</small>${monthly?'<small>بداية التحدي: '+dateText(String(monthly.month_start||"").slice(0,10))+'</small>':""}</div>
+   </div></section>
+   <section class="student-progress-card student-rankings"><h3>ترتيبك بين زملائك</h3><div class="student-ranking-grid">
+    <div><h4>أفضل الطلاب إجمالًا</h4><ol id="studentOverallTop"><li>جاري تحميل الترتيب...</li></ol></div>
+    <div><h4>أفضل الطلاب في مستواك</h4><ol id="studentLevelTop"><li>جاري تحميل الترتيب...</li></ol></div>
+   </div></section>
+   <div class="student-report-footer"><span>أثرٌ يبقى</span><i>۞</i><span>نورٌ لا ينطفئ</span><small>هذا التقرير يعرض بيانات الطالب وقت الاستعلام</small></div>
+  </div>
+  <div class="student-profile-actions"><button type="button" class="secondary" id="studentPrintBtn">🖨️ طباعة / حفظ PDF</button><button type="button" class="secondary" id="studentImageBtn">🖼️ حفظ التقرير صورة</button><button type="button" class="primary" id="studentLookupAgain">استعلام بكود آخر</button></div><p id="studentExportMessage" class="message" aria-live="polite"></p>`;
  $("studentLookupAgain").onclick=()=>{$("studentProfile").classList.add("hidden");$("studentForm").classList.remove("hidden");$("studentCode").value="";$("studentMessage").textContent="";$("studentCode").focus()};
  $("studentPrintBtn").onclick=()=>window.print();
+ $("studentImageBtn").onclick=saveStudentReportImage;
+ loadStudentReportRankings(s);
+}
+async function loadStudentReportRankings(student){
+ try{
+  const {data,error}=await db.rpc("public_leaderboards");if(error)throw error;
+  const overall=(data?.overall||[]).slice(0,10),byLevel=(data?.levels?.[student.level]||[]).slice(0,10);
+  const render=rows=>rows.length?rows.map(x=>'<li class="'+(x.name===student.full_name?'is-me':'')+'"><span>'+Number(x.rank)+'</span><b>'+esc(x.name)+(x.name===student.full_name?' (أنت)':'')+'</b><strong>'+Number(x.points).toLocaleString("en-US")+'</strong></li>').join(""):'<li>لا توجد بيانات متاحة حاليًا.</li>';
+  $("studentOverallTop").innerHTML=render(overall);$("studentLevelTop").innerHTML=render(byLevel);
+ }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";$("studentLevelTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
+}
+async function saveStudentReportImage(){
+ const btn=$("studentImageBtn"),status=$("studentExportMessage"),target=$("studentReport");
+ if(!target)return;
+ if(!window.html2canvas){status.textContent="ميزة حفظ الصورة لم تُحمّل بعد. حدّث الصفحة وحاول مرة أخرى.";return}
+ btn.disabled=true;btn.textContent="جاري تجهيز الصورة...";
+ status.textContent="لحظات، بنجهز صورة التقرير كاملة...";
+ try{
+  const canvas=await window.html2canvas(target,{scale:2,backgroundColor:document.body.classList.contains("dark")?"#14221b":"#f8f7f1",useCORS:true,logging:false,windowWidth:Math.max(target.scrollWidth,document.documentElement.clientWidth)});
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+  if(!blob)throw Error("تعذر إنشاء ملف الصورة");
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="تقرير-صفوة-الحفاظ-"+($("studentProfile").querySelector(".student-profile-head h2")?.textContent||"الطالب").replace(/[^\u0600-\u06FF\w-]+/g,"-")+".png";
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  status.textContent="تم تجهيز صورة التقرير بنجاح.";
+ }catch(e){status.textContent="حصلت مشكلة أثناء حفظ الصورة. جرّب مرة أخرى أو استخدم PDF."}
+ finally{btn.disabled=false;btn.textContent="🖼️ حفظ التقرير صورة"}
 }
 async function routeAdmin(user){
   const a=await db.from("admin_profiles").select("username,display_name,is_active,must_change_password").eq("user_id",user.id).maybeSingle();
