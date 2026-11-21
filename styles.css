@@ -390,3 +390,40 @@ button:disabled{opacity:.6;cursor:wait}
  .student-profile-head h2,.student-report-brand b,.student-challenge-cards b,.student-ranking-grid h4{color:#173f2d!important}
  .student-report-total,.student-tier.is-reached,.student-bars,.student-ranking-grid>div{ -webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+
+/* ===== Compact admin dashboard ===== */
+#adminView{max-width:980px;margin:0 auto}
+#adminView .dashhead{align-items:center}
+#adminView .stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+#adminView .stats article{padding:14px 17px;border-radius:16px}
+#adminView .stats span{font-size:12px}
+#adminView .stats strong{font-size:27px}
+#adminView>.content{padding:20px;margin:0 0 14px}
+#adminView>.content h3{margin:0 0 12px}
+.admin-accordion{margin:0 0 11px;border:1px solid rgba(181,139,59,.25);border-radius:17px;background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.admin-accordion>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:62px;padding:15px 19px;cursor:pointer;list-style:none;color:var(--green-deep);font-weight:800;font-size:16px}
+.admin-accordion>summary::-webkit-details-marker{display:none}
+.admin-accordion>summary:after{content:"＋";display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;border-radius:9px;background:var(--green-soft);color:var(--gold);font-size:17px}
+.admin-accordion[open]>summary:after{content:"−"}
+.admin-accordion>summary span{margin-right:auto;color:var(--muted);font-size:10px;font-weight:500}
+.admin-accordion[open]>summary{border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(234,242,236,.45),transparent)}
+.admin-accordion>.content{margin:0!important;padding:18px 19px!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.admin-accordion>.content h3{display:none}
+.admin-accordion .stack{gap:8px}
+.admin-accordion .table-wrap{max-width:100%}
+.dark .admin-accordion{background:var(--surface);border-color:#d7b66b38}
+.dark .admin-accordion>summary{color:#f0e5c9}
+@media(max-width:650px){
+ #adminView .stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ #adminView .stats article{padding:12px 8px;text-align:center}
+ #adminView .stats span{font-size:10px;line-height:1.5}
+ #adminView .stats strong{font-size:22px}
+ #adminView>.content{padding:15px}
+ .admin-accordion>summary{min-height:57px;padding:13px 14px;font-size:14px}
+ .admin-accordion>.content{padding:14px!important}
+}
+@media(max-width:390px){
+ #adminView .stats{grid-template-columns:1fr 1fr}
+ #adminView .stats article:last-child{grid-column:1/-1}
+}
