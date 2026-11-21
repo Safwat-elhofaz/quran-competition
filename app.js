@@ -207,7 +207,7 @@ $("studentManageNameSearch").oninput=renderStudentManagement;$("studentManageCod
 
 $("studentManagementResults").onclick=async e=>{
  const edit=e.target.closest("[data-edit-student]");
- if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentGroup").value=x.group_level||"";$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
+ if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
  const btn=e.target.closest("[data-delete-student]");if(!btn)return;const x=dashboardStudents.find(v=>v.id===btn.dataset.deleteStudent);if(!x)return;
  if(!window.confirm("هل تريد حذف الطالب "+x.full_name+" نهائيًا؟"))return;
  try{btn.disabled=true;btn.textContent="جاري التنفيذ...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+".");await loadDashboard()}
@@ -215,7 +215,7 @@ $("studentManagementResults").onclick=async e=>{
 };
 $("cancelStudentEdit").onclick=()=>{$("editStudentForm").classList.add("hidden");$("editStudentForm").reset()};
 $("editStudentForm").onsubmit=async e=>{
- e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim(),group=$("editStudentGroup").value;
+ e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim();
  if(!x||!name){msg("studentManagementMessage","راجع اسم الطالب والمجموعة.",true);return}
  const save=$("editStudentForm").querySelector("button.primary");
  try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:x.group_level});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:group});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث بيانات الطالب بنجاح.");await loadDashboard()}
