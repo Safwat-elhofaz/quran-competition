@@ -334,3 +334,59 @@ button:disabled{opacity:.6;cursor:wait}
  .identity-divider{font-size:19px}
 }
 @media(prefers-reduced-motion:reduce){.identity-divider{animation:none}}
+
+
+/* Student report layout and image/PDF export */
+.student-report{overflow:hidden;border:1px solid rgba(181,139,59,.34);border-radius:23px;background:var(--surface);box-shadow:var(--shadow)}
+.student-report-cover{padding:20px;background:radial-gradient(circle at 90% 10%,rgba(181,139,59,.16),transparent 28%),linear-gradient(135deg,var(--green-soft),var(--surface));border-bottom:1px solid var(--line)}
+.student-report-brand{display:flex;align-items:center;gap:10px;margin-bottom:15px;color:var(--green-deep)}
+.student-report-brand>span{display:grid;place-items:center;width:42px;height:42px;border:1px solid var(--gold-light);border-radius:13px;color:var(--gold);font-size:25px}
+.student-report-brand b,.student-report-brand small{display:block}.student-report-brand small{font-size:10px;color:var(--muted)}
+.student-report .student-profile-head{margin:0;padding:14px 0 18px;border:0;border-radius:0;background:none}
+.student-report-total{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:15px 17px;border:1px solid var(--gold-light);border-radius:16px;background:rgba(255,255,255,.48)}
+.student-report-total span{font-size:13px;color:var(--muted)}.student-report-total strong{font-size:34px;color:var(--gold);font-variant-numeric:tabular-nums}.student-report-total small{margin-right:auto;color:var(--green);font-size:11px}
+.student-group-value{font-size:19px!important}
+.student-tier-card{margin-top:14px}
+.student-tier-scale{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:12px 0 20px}
+.student-tier{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 3px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:10px;background:var(--green-soft)}
+.student-tier i{width:10px;height:10px;border:2px solid var(--gold);border-radius:50%}.student-tier b{font-size:10px}
+.student-tier.is-reached{color:var(--green-deep);border-color:var(--gold);background:rgba(181,139,59,.13)}.student-tier.is-reached i{background:var(--gold)}
+.student-chart-note{font-size:11px;color:var(--muted);margin:-4px 0 15px}
+.student-bars{display:grid;gap:14px;padding:14px;border-radius:14px;background:var(--green-soft)}
+.student-bar-row{display:grid;grid-template-columns:70px 1fr 38px;align-items:center;gap:9px;font-size:12px}
+.student-bar-row>span{color:var(--muted)}.student-bar-row>b{text-align:left;color:var(--green-deep);font-variant-numeric:tabular-nums}
+.student-bar-track{height:13px;border-radius:30px;background:rgba(120,140,125,.2);overflow:hidden}.student-bar-track i{display:block;height:100%;border-radius:30px;background:linear-gradient(90deg,#28a5d7,#44c6e8)}.student-bar-track.monthly i{background:linear-gradient(90deg,#18866a,#45b99a)}
+.student-challenge-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.student-challenge-cards>div{display:flex;flex-direction:column;gap:5px;padding:13px;border:1px solid var(--line);border-radius:13px}
+.student-challenge-cards span{font-size:11px;color:var(--gold);font-weight:800}.student-challenge-cards b{font-size:13px;color:var(--green-deep)}.student-challenge-cards small{font-size:10px;color:var(--muted)}
+.student-ranking-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.student-ranking-grid>div{min-width:0;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--green-soft)}
+.student-ranking-grid h4{margin:0 0 9px;color:var(--green-deep);font-size:13px}
+.student-ranking-grid ol{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.student-ranking-grid li{display:grid;grid-template-columns:25px 1fr auto;align-items:center;gap:6px;padding:7px 6px;border-bottom:1px solid var(--line);font-size:10px}
+.student-ranking-grid li:last-child{border:0}.student-ranking-grid li>span{color:var(--gold);font-weight:800}.student-ranking-grid li>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.student-ranking-grid li>strong{color:var(--green-deep);font-variant-numeric:tabular-nums}
+.student-ranking-grid li.is-me{background:rgba(181,139,59,.16);border-radius:8px}
+.student-report-footer{display:flex;align-items:center;justify-content:center;gap:13px;flex-wrap:wrap;padding:17px;color:var(--gold);font-weight:800}
+.student-report-footer i{font-style:normal;font-size:19px}.student-report-footer small{flex-basis:100%;text-align:center;color:var(--muted);font-size:9px;font-weight:400}
+.student-profile-actions{display:grid;grid-template-columns:1fr 1fr 1fr}.student-profile-actions button{font-size:12px;padding:11px 8px}
+.dark .student-report-cover{background:radial-gradient(circle at 90% 10%,rgba(215,182,107,.13),transparent 30%),linear-gradient(135deg,#20392d,#192a22)}
+.dark .student-report-total{background:rgba(15,25,20,.32)}.dark .student-tier{background:#20392d}
+.dark .student-bars,.dark .student-ranking-grid>div{background:#20392d}
+@media(max-width:650px){
+ .student-report{border-radius:17px}.student-report-cover{padding:14px}
+ .student-tier-scale{gap:3px}.student-tier{font-size:9px;padding:8px 1px}.student-tier b{font-size:9px}
+ .student-challenge-cards,.student-ranking-grid{grid-template-columns:1fr}
+ .student-profile-actions{grid-template-columns:1fr 1fr}.student-profile-actions button:last-child{grid-column:1/-1}
+ .student-report-total strong{font-size:30px}
+}
+@media print{
+ @page{size:auto;margin:12mm}
+ body{background:#fff!important;color:#111!important}
+ .student-report{border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;overflow:visible!important}
+ .student-report-cover,.student-progress-card,.student-stats-grid article,.student-ranking-grid>div,.student-challenge-cards>div{break-inside:avoid;box-shadow:none!important}
+ .student-report-cover{background:#eef4ef!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .student-profile-actions,#studentExportMessage{display:none!important}
+ .student-profile{margin:0!important;padding:0!important}
+ .student-profile-head h2,.student-report-brand b,.student-challenge-cards b,.student-ranking-grid h4{color:#173f2d!important}
+ .student-report-total,.student-tier.is-reached,.student-bars,.student-ranking-grid>div{ -webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
