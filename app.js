@@ -174,10 +174,6 @@ async function loadDashboard(){
     const rankById=new Map();let currentRank=0,previousPoints=null;
     ranked.forEach((x,i)=>{if(i===0||x.total_points!==previousPoints)currentRank=i+1;rankById.set(x.student_id,currentRank);previousPoints=x.total_points});
     dashboardRankById=rankById;
-    $("studentsTable").innerHTML=s.data.length?s.data.map(x=>{
-      const v=ranked.find(y=>y.student_id===x.id),points=v?.total_points??0;
-      return "<tr><td>"+esc(x.full_name)+"</td><td>"+esc(x.student_code)+"</td><td>"+points+"</td><td>"+level(points)+"</td><td>"+(rankById.get(x.id)||"—")+"</td><td class='"+(x.is_active?"status-active":"")+"'>"+(x.is_active?"نشط":"موقوف")+"</td></tr>"
-    }).join(""):'<tr><td colspan="6">لا يوجد طلاب حتى الآن</td></tr>';
     renderStudentManagement();
     resetManualStudentLookup();
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
@@ -200,11 +196,12 @@ async function loadManualAdjustmentHistory(students,admins){
 }
 function renderStudentManagement(){
  const name=$("studentManageNameSearch").value.trim().toLocaleLowerCase("ar"),code=$("studentManageCodeSearch").value.trim();
- const rows=dashboardStudents.filter(x=>(!name||x.full_name.toLocaleLowerCase("ar").includes(name))&&(!code||x.student_code.includes(code)));
+ if(!name&&!code){$("studentManagementResults").innerHTML='<p class="muted-note">اكتب اسم الطالب أو كوده للبحث، ثم استخدم أزرار التعديل أو الحذف.</p>';return}
+ const rows=dashboardStudents.filter(x=>(!name||x.full_name.toLocaleLowerCase("ar").includes(name))&&(!code||x.student_code.includes(code))).slice(0,30);
  $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{
   const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
-  return "<tr><td>"+esc(x.full_name)+"</td><td>"+esc(x.student_code)+"</td><td>"+total+"</td><td>"+esc(x.group_level||"غير محددة")+"</td><td>"+(x.is_active?"نشط":"موقوف")+"</td><td><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل البيانات</button> <button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف</button></td></tr>"
- }).join(""):"<tr><td colspan='6'>لا توجد نتائج مطابقة.</td></tr>";
+  return "<article class='student-search-card'><div class='student-search-card-info'><strong>"+esc(x.full_name)+"</strong><span>الكود: "+esc(x.student_code)+"</span><span>النقاط: "+total+" · المجموعة: "+esc(x.group_level||"غير محددة")+"</span><small>"+(x.is_active?"نشط":"موقوف")+"</small></div><div class='student-search-card-actions'><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل الاسم</button><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف الطالب</button></div></article>"
+ }).join(""):'<p class="muted-note">لا توجد نتائج مطابقة لعملية البحث.</p>';
 }
 $("studentManageNameSearch").oninput=renderStudentManagement;$("studentManageCodeSearch").oninput=renderStudentManagement;
 
@@ -221,7 +218,7 @@ $("editStudentForm").onsubmit=async e=>{
  e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim(),group=$("editStudentGroup").value;
  if(!x||!name){msg("studentManagementMessage","راجع اسم الطالب والمجموعة.",true);return}
  const save=$("editStudentForm").querySelector("button.primary");
- try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:group});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:group});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث بيانات الطالب بنجاح.");await loadDashboard()}
+ try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:x.group_level});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:group});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث بيانات الطالب بنجاح.");await loadDashboard()}
  catch(err){msg("studentManagementMessage","تعذر تعديل البيانات: "+err.message,true)}
  finally{save.disabled=false;save.textContent="حفظ التعديلات"}
 };
