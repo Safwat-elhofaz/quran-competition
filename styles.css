@@ -427,3 +427,15 @@ button:disabled{opacity:.6;cursor:wait}
  #adminView .stats{grid-template-columns:1fr 1fr}
  #adminView .stats article:last-child{grid-column:1/-1}
 }
+
+.student-search-results{display:grid;gap:10px;margin-top:16px}
+.student-search-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:15px;background:var(--green-soft)}
+.student-search-card-info{display:grid;gap:5px;min-width:0}
+.student-search-card-info strong{color:var(--green-deep);font-size:15px}
+.student-search-card-info span,.student-search-card-info small{font-size:11px;color:var(--muted)}
+.student-search-card-actions{display:flex;gap:7px;flex-wrap:wrap}
+.student-search-card-actions button{white-space:nowrap;padding:9px 12px;font-size:12px}
+.student-editor{margin:15px 0;padding:16px;border:1px solid var(--gold-light);border-radius:15px;background:var(--surface)}
+@media(max-width:560px){.student-search-card{align-items:stretch;flex-direction:column;gap:11px;padding:13px}.student-search-card-actions{display:grid;grid-template-columns:1fr 1fr}.student-search-card-actions button{width:100%;padding:11px 7px}}
+.dark .student-search-card{background:#20392d;border-color:#d7b66b38}
+.dark .student-search-card-info strong{color:#f0e5c9}
