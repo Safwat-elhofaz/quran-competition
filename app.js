@@ -72,6 +72,12 @@ function renderStudentProfile(data){
  const maxChallenge=Math.max(weeklyPoints,monthlyPoints,1);
  const tiers=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300]];
  const tiersHtml=tiers.map(([name,points])=>'<div class="student-tier '+(total>=points?'is-reached':'')+'"><i></i><span>'+name+'</span><b>'+points+'</b></div>').join("");
+ const performance=data.performance||{},history=Array.isArray(performance.weekly_history)?performance.weekly_history:[],neighbors=Array.isArray(performance.group_students)?performance.group_students:[];
+ const chartMax=Math.max(1,...history.flatMap(w=>[Number(w.points)||0,Number(w.group_average)||0]));
+ const weeklyChartHtml=history.length?'<div class="student-weekly-chart">'+history.map(w=>'<div class="student-week-column"><div class="student-week-bars"><i class="student-own-bar" style="height:'+Math.max(3,(Number(w.points)||0)/chartMax*100)+'%"></i><i class="student-average-bar" style="height:'+Math.max(3,(Number(w.group_average)||0)/chartMax*100)+'%"></i></div><b>أسبوع '+Number(w.week_number)+'</b><small>'+(Number(w.points)||0)+' نقطة</small></div>').join("")+'</div><div class="student-chart-legend"><span><i class="student-own-key"></i> نقاطك</span><span><i class="student-average-key"></i> متوسط المجموعة</span></div>':'<p class="muted-note">لا توجد بيانات أسابيع مسجلة في المسابقة الحالية بعد.</p>';
+ const ownVsAverage=Math.max(0,Number(performance.group_average)||0,total,1),groupOwnWidth=Math.min(100,total/ownVsAverage*100),groupAverageWidth=Math.min(100,(Number(performance.group_average)||0)/ownVsAverage*100);
+ const neighborHtml=neighbors.length?'<ol class="student-nearby-list">'+neighbors.map(n=>'<li class="'+(n.is_student?'is-me':'')+'"><span>'+Number(n.rank)+'</span><b>'+esc(n.name)+(n.is_student?' (أنت)':'')+'</b><strong>'+Number(n.points).toLocaleString("en-US")+'</strong></li>').join("")+'</ol>':'<p class="muted-note">لا توجد بيانات ترتيب متاحة للمجموعة.</p>';
+
  $("studentProfile").innerHTML=`
   <div class="student-report" id="studentReport">
    <div class="student-report-cover">
@@ -88,6 +94,10 @@ function renderStudentProfile(data){
     <div><span>التحدي الأسبوعي</span><b>${weekly?esc(weekly.title||("الأسبوع "+weekly.week_number)):"لا يوجد تحدٍ نشط"}</b><small>ترتيبك: ${weekly?Number(weekly.rank)||"—":"—"} · نقاطك: ${weeklyPoints}</small>${weekly?'<small>من '+dateText(String(weekly.week_start||"").slice(0,10))+' إلى '+dateText(String(weekly.week_end||"").slice(0,10))+'</small>':""}</div>
     <div><span>التحدي الشهري</span><b>${monthly?esc(monthly.title||"التحدي الشهري"):"لا يوجد تحدٍ نشط"}</b><small>ترتيبك: ${monthly?Number(monthly.rank)||"—":"—"} · نقاطك: ${monthlyPoints}</small>${monthly?'<small>بداية التحدي: '+dateText(String(monthly.month_start||"").slice(0,10))+'</small>':""}</div>
    </div></section>
+
+   <section class="student-progress-card student-performance-card"><h3>أداؤك أسبوعًا بعد أسبوع</h3><p class="student-chart-note">مقارنة نقاطك بمتوسط نقاط مجموعتك في كل أسبوع من المسابقة</p>${weeklyChartHtml}</section>
+   <section class="student-progress-card student-group-performance"><h3>معدلات أدائك في مجموعتك</h3><div class="student-group-kpis"><div><strong>${Number(performance.group_rank)||"—"}</strong><span>ترتيبك في المجموعة</span></div><div><strong>${Number(performance.group_size)||0}</strong><span>عدد طلاب المجموعة</span></div><div><strong>${Number(performance.group_average)||0}</strong><span>متوسط نقاط المجموعة</span></div></div><div class="student-compare-row"><span>نقاطك</span><div class="student-compare-track"><i style="width:${groupOwnWidth}%"></i></div><b>${total}</b></div><div class="student-compare-row average"><span>المتوسط</span><div class="student-compare-track"><i style="width:${groupAverageWidth}%"></i></div><b>${Number(performance.group_average)||0}</b></div><p class="student-chart-note">${total>Number(performance.group_average||0)?"أنت أعلى من متوسط مجموعتك بـ "+(total-Number(performance.group_average||0))+" نقطة.":total<Number(performance.group_average||0)?"متبقي لك "+(Number(performance.group_average||0)-total)+" نقطة لتصل إلى متوسط مجموعتك.":"أنت عند متوسط مجموعتك تمامًا."}</p></section>
+   <section class="student-progress-card student-nearby-card"><h3>الطلاب الأقرب لترتيبك في المجموعة</h3><p class="student-chart-note">الطالبان السابقان والطالبان التاليان في ترتيب مجموعتك</p>${neighborHtml}</section>
    <section class="student-progress-card student-rankings"><h3>ترتيبك بين زملائك</h3><div class="student-ranking-grid">
     <div><h4>أفضل الطلاب إجمالًا</h4><ol id="studentOverallTop"><li>جاري تحميل الترتيب...</li></ol></div>
     <div><h4>أفضل الطلاب في مستواك</h4><ol id="studentLevelTop"><li>جاري تحميل الترتيب...</li></ol></div>
