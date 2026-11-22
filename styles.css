@@ -480,3 +480,57 @@ button:disabled{opacity:.6;cursor:wait}
 .student-nearby-list li.is-me{background:#e6f2ed;border-radius:9px;color:#104f43;font-weight:800}
 .dark .student-nearby-list li.is-me{background:#183b32;color:#d9f2e9}
 @media(max-width:520px){.student-group-kpis{gap:5px}.student-group-kpis>div{padding:10px 3px}.student-group-kpis strong{font-size:19px}.student-group-kpis span{font-size:10px}.student-weekly-chart{gap:6px;padding-inline:2px}.student-week-bars{height:110px}.student-week-column small{font-size:9px}}
+
+
+/* Admin student profile and performance dashboard */
+.admin-student-profile-view{display:grid;gap:14px;margin-top:16px}
+.admin-profile-back{justify-self:start}
+.admin-student-summary,.admin-student-tools,.admin-performance-section{padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}
+.admin-student-summary{background:linear-gradient(125deg,var(--green-soft),var(--surface))}
+.admin-student-summary h2{margin:6px 0 12px;color:var(--green-deep);font-size:clamp(24px,5vw,32px)}
+.admin-student-meta{display:flex;gap:8px 16px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.admin-student-total{display:flex;align-items:baseline;gap:9px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--green-deep)}
+.admin-student-total small{font-size:13px;color:var(--muted)}
+.admin-student-total strong{font-size:36px;color:var(--gold);font-variant-numeric:tabular-nums}
+.admin-student-tools h3,.admin-performance-section h3{margin:0 0 12px;color:var(--green-deep);font-size:18px}
+.admin-student-points-control{display:grid;gap:8px;max-width:520px}
+.admin-student-points-control label{font-size:13px;color:var(--muted);font-weight:700}
+.admin-student-points-control input{width:100%;min-height:48px;border:1px solid var(--line);border-radius:12px;padding:10px 13px;background:var(--surface);font:inherit}
+.admin-profile-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.admin-profile-actions button{flex:1;min-height:44px}
+.admin-performance-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.admin-performance-kpis article,.admin-performance-ranks article{display:flex;flex-direction:column;gap:5px;min-width:0;padding:13px;border:1px solid var(--line);border-radius:13px;background:var(--green-soft)}
+.admin-performance-kpis small,.admin-performance-ranks small{font-size:11px;color:var(--muted)}
+.admin-performance-kpis strong{font-size:23px;color:var(--green-deep);font-variant-numeric:tabular-nums}
+.admin-performance-trend{margin:12px 0 0;padding:10px 12px;border-radius:11px;background:rgba(181,139,59,.12);color:var(--green-deep);font-size:13px;font-weight:700}
+.admin-performance-chart{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));align-items:end;gap:5px;min-height:170px;padding:12px 4px 0;border-bottom:1px solid var(--line)}
+.admin-performance-chart.admin-month-chart{grid-template-columns:repeat(6,minmax(0,1fr))}
+.admin-performance-bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;min-width:0;height:155px}
+.admin-performance-bar-value{min-height:14px;font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.admin-performance-bar-track{display:flex;align-items:flex-end;justify-content:center;width:100%;height:105px;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to top,transparent 0,transparent 25px,var(--line) 26px)}
+.admin-performance-bar-track i{display:block;width:min(70%,22px);min-height:0;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#d9b65e,#168064)}
+.admin-performance-bar-track i.is-negative{background:#b85b57}
+.admin-performance-bar-col small{font-size:9px;color:var(--muted);white-space:nowrap;transform:rotate(-20deg);transform-origin:center top}
+.admin-performance-ranks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.admin-performance-ranks strong{font-size:30px;color:var(--gold);font-variant-numeric:tabular-nums}
+.admin-performance-ranks span{font-size:10px;color:var(--muted);line-height:1.5}
+.admin-student-name-link{padding:0;border:0;background:none;color:var(--green-deep);font:800 16px Cairo,sans-serif;text-align:right;cursor:pointer;text-decoration:underline;text-decoration-color:var(--gold-light);text-underline-offset:4px}
+.admin-open-profile{white-space:nowrap;align-self:center}
+.positive-points{color:#168064;font-weight:800}.negative-points{color:#b85b57;font-weight:800}
+.dark .admin-student-summary{background:linear-gradient(125deg,#20392d,#192a22)}
+.dark .admin-student-summary h2,.dark .admin-student-total{color:#f0e5c9}
+.dark .admin-performance-kpis article,.dark .admin-performance-ranks article{background:#20392d}
+.dark .admin-student-points-control input{background:#172820;color:#f3f0e7}
+@media(max-width:650px){
+ .admin-student-summary,.admin-student-tools,.admin-performance-section{padding:14px}
+ .admin-performance-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-performance-ranks{grid-template-columns:1fr}
+ .admin-performance-ranks article{display:grid;grid-template-columns:1fr auto;align-items:center}
+ .admin-performance-ranks span{grid-column:1/-1}
+ .admin-performance-chart{gap:2px;grid-template-columns:repeat(14,minmax(0,1fr))}
+ .admin-performance-bar-col small{font-size:8px;transform:rotate(-35deg)}
+ .admin-performance-bar-value{font-size:8px}
+ .admin-profile-actions{display:grid;grid-template-columns:1fr 1fr}
+ .admin-profile-actions button:last-child{grid-column:1/-1}
+ .admin-open-profile{width:100%}
+}
