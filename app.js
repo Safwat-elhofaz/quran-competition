@@ -175,7 +175,6 @@ async function loadDashboard(){
     ranked.forEach((x,i)=>{if(i===0||x.total_points!==previousPoints)currentRank=i+1;rankById.set(x.student_id,currentRank);previousPoints=x.total_points});
     dashboardRankById=rankById;
     renderStudentManagement();
-    resetManualStudentLookup();
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
     renderPeriodControls(c,w);await loadHistory(c)
   }catch(e){msg("addStudentMessage","تعذر تحميل البيانات: "+e.message,true)}
@@ -194,90 +193,42 @@ async function loadManualAdjustmentHistory(students,admins){
     return "<tr><td>"+new Date(x.created_at).toLocaleString("ar-EG")+"</td><td>"+(student?esc(student.full_name)+" ("+esc(student.student_code)+")":"طالب")+"</td><td>"+change+"</td><td>"+before+" ← "+after+"</td><td>"+esc(d.adjustment_reason||"—")+"</td><td>"+esc(adminMap.get(x.admin_user_id)||"مشرف")+"</td></tr>";
   }).join(""):'<tr><td colspan="6">لا توجد تعديلات يدوية حتى الآن</td></tr>';
 }
+function normalizeStudentName(value){return String(value||"").trim().toLocaleLowerCase("ar")}
 function renderStudentManagement(){
- const name=$("studentManageNameSearch").value.trim().toLocaleLowerCase("ar"),code=$("studentManageCodeSearch").value.trim();
- if(!name&&!code){$("studentManagementResults").innerHTML='<p class="muted-note">اكتب اسم الطالب أو كوده للبحث، ثم استخدم أزرار التعديل أو الحذف.</p>';return}
- const rows=dashboardStudents.filter(x=>(!name||x.full_name.toLocaleLowerCase("ar").includes(name))&&(!code||x.student_code.includes(code))).slice(0,30);
+ const query=$("studentAdminSearch").value.trim().toLocaleLowerCase("ar");
+ if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث.</p>';return}
+ const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(query)||x.student_code.includes(query)).slice(0,30);
  $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{
-  const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
-  return "<article class='student-search-card'><div class='student-search-card-info'><strong>"+esc(x.full_name)+"</strong><span>الكود: "+esc(x.student_code)+"</span><span>النقاط: "+total+" · المجموعة: "+esc(x.group_level||"غير محددة")+"</span><small>"+(x.is_active?"نشط":"موقوف")+"</small></div><div class='student-search-card-actions'><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل الاسم</button><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف الطالب</button></div></article>"
+  const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0),disabled=x.is_active?"":"disabled";
+  return "<article class='student-search-card'><div class='student-search-card-info'><strong>"+esc(x.full_name)+"</strong><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><div class='student-points-controls'><label for='studentPoints-"+x.id+"'>عدد النقاط</label><input id='studentPoints-"+x.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+x.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+x.id+"' "+disabled+">إضافة نقاط</button></div></div><div class='student-search-card-actions'><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل الاسم</button><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف الطالب</button></div></article>"
  }).join(""):'<p class="muted-note">لا توجد نتائج مطابقة لعملية البحث.</p>';
 }
-$("studentManageNameSearch").oninput=renderStudentManagement;$("studentManageCodeSearch").oninput=renderStudentManagement;
-
+$("studentAdminSearch").oninput=renderStudentManagement;
 $("studentManagementResults").onclick=async e=>{
  const edit=e.target.closest("[data-edit-student]");
  if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
- const btn=e.target.closest("[data-delete-student]");if(!btn)return;const x=dashboardStudents.find(v=>v.id===btn.dataset.deleteStudent);if(!x)return;
- if(!window.confirm("هل تريد حذف الطالب "+x.full_name+" نهائيًا؟"))return;
- try{btn.disabled=true;btn.textContent="جاري التنفيذ...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+".");await loadDashboard()}
- catch(err){btn.disabled=false;btn.textContent="حذف";msg("studentManagementMessage","تعذر الحذف: "+err.message,true)}
+ const del=e.target.closest("[data-delete-student]");
+ if(del){const x=dashboardStudents.find(v=>v.id===del.dataset.deleteStudent);if(!x)return;if(!window.confirm("هل تريد حذف الطالب "+x.full_name+" نهائيًا؟"))return;
+  try{del.disabled=true;del.textContent="جاري التنفيذ...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+".");await loadDashboard()}
+  catch(err){del.disabled=false;del.textContent="حذف الطالب";msg("studentManagementMessage","تعذر الحذف: "+err.message,true)}return}
+ const set=e.target.closest("[data-set-total]"),add=e.target.closest("[data-add-points]"),button=set||add;if(!button)return;
+ const id=button.dataset.setTotal||button.dataset.addPoints,x=dashboardStudents.find(v=>v.id===id),input=$("studentPoints-"+id),value=Number(input?.value);
+ if(!x||!x.is_active){msg("studentManagementMessage","لا يمكن تعديل نقاط طالب غير نشط.",true);return}
+ if(input.value===""||!Number.isInteger(value)||value<0||(!!add&&value===0)){msg("studentManagementMessage",add?"اكتب عددًا صحيحًا أكبر من صفر للإضافة.":"اكتب إجماليًا صحيحًا يساوي صفرًا أو أكثر.",true);input.focus();return}
+ const mode=set?"set_total":"add",action=set?"تعديل إجمالي "+x.full_name+" إلى "+value+" نقطة":"إضافة "+value+" نقطة إلى "+x.full_name;
+ if(!window.confirm("تأكيد "+action+"؟"))return;
+ try{button.disabled=true;button.textContent="جاري التنفيذ...";const r=await db.rpc("admin_adjust_student_points",{p_student_id:id,p_mode:mode,p_points:value,p_reason:set?"تعديل إجمالي من لوحة الطلاب":"إضافة نقاط من لوحة الطلاب"});if(r.error)throw r.error;const result=Array.isArray(r.data)?r.data[0]:r.data;if(!result)throw Error("لم تصل نتيجة التعديل من قاعدة البيانات.");msg("studentManagementMessage",result.points_delta===0?"إجمالي الطالب بالفعل يساوي الرقم المطلوب.":"تم التعديل بنجاح. الإجمالي: "+result.previous_total+" ← "+result.new_total+" نقطة.");await loadDashboard()}
+ catch(err){button.disabled=false;button.textContent=set?"تعديل الإجمالي":"إضافة نقاط";msg("studentManagementMessage","تعذر تعديل النقاط: "+err.message,true)}
 };
 $("cancelStudentEdit").onclick=()=>{$("editStudentForm").classList.add("hidden");$("editStudentForm").reset()};
 $("editStudentForm").onsubmit=async e=>{
  e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim();
- if(!x||!name){msg("studentManagementMessage","راجع اسم الطالب والمجموعة.",true);return}
+ if(!x||!name){msg("studentManagementMessage","اكتب اسمًا صحيحًا للطالب.",true);return}
+ if(dashboardStudents.some(v=>v.id!==id&&normalizeStudentName(v.full_name)===normalizeStudentName(name))){msg("studentManagementMessage","يوجد طالب آخر مسجل بنفس الاسم.",true);return}
  const save=$("editStudentForm").querySelector("button.primary");
- try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:x.group_level});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:group});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث بيانات الطالب بنجاح.");await loadDashboard()}
- catch(err){msg("studentManagementMessage","تعذر تعديل البيانات: "+err.message,true)}
- finally{save.disabled=false;save.textContent="حفظ التعديلات"}
-};
-
-function updateManualPointsLabel(){
-  const mode=$("manualPointsMode").value;
-  $("manualPointsValueLabel").textContent=mode==="set_total"?"الإجمالي الجديد المطلوب":mode==="subtract"?"عدد النقاط المراد خصمها":"عدد النقاط المراد إضافتها";
-  $("manualPointsValue").min=mode==="set_total"?"0":"1";
-  $("manualPointsValue").placeholder=mode==="set_total"?"مثال: 150":"اكتب عدد النقاط";
-  updateManualPointsPreview();
-}
-function resetManualStudentLookup(){
- $("manualPointsStudentId").value="";$("manualPointsStudentInfo").textContent="ابحث بالاسم أو الكود، ثم اختر الطالب من النتائج.";$("manualPointsStudentInfo").classList.remove("found");updateManualPointsPreview();
-}
-function renderPointsStudentMatches(){
- const name=$("manualPointsNameSearch").value.trim().toLocaleLowerCase("ar"),code=$("manualPointsCodeSearch").value.trim();
- $("manualPointsStudentId").value="";$("manualPointsStudentInfo").textContent="اختار الطالب من نتائج البحث قبل تعديل النقاط.";$("manualPointsStudentInfo").classList.remove("found");updateManualPointsPreview();
- if(!name&&!code){$("pointsStudentResults").innerHTML="";return}
- const matches=dashboardStudents.filter(x=>x.is_active&&(!name||x.full_name.toLocaleLowerCase("ar").includes(name))&&(!code||x.student_code.includes(code))).slice(0,30);
- $("pointsStudentResults").innerHTML=matches.length?matches.map(x=>"<button type='button' class='student-match' data-student-id='"+x.id+"'><b>"+esc(x.full_name)+"</b><span>الكود: "+esc(x.student_code)+"</span></button>").join(""):"<p class='muted-note'>مفيش طالب مطابق لبيانات البحث.</p>";
-}
-function selectManualPointsStudent(id){
- const x=dashboardStudents.find(v=>v.id===id&&v.is_active);if(!x)return;
- $("manualPointsStudentId").value=x.id;$("manualPointsStudentInfo").textContent=x.full_name+" — كود "+x.student_code+" — الإجمالي الحالي "+Number(dashboardRanked.find(v=>v.student_id===id)?.total_points||0)+" نقطة";$("manualPointsStudentInfo").classList.add("found");$("pointsStudentResults").innerHTML="";updateManualPointsPreview();
-}
-$("manualPointsNameSearch").oninput=renderPointsStudentMatches;$("manualPointsCodeSearch").oninput=renderPointsStudentMatches;
-$("pointsStudentResults").onclick=e=>{const b=e.target.closest("[data-student-id]");if(b)selectManualPointsStudent(b.dataset.studentId)};
-function updateManualPointsPreview(){
-  const id=$("manualPointsStudentId").value,mode=$("manualPointsMode").value,value=Number($("manualPointsValue").value);
-  const current=Number(dashboardRanked.find(x=>x.student_id===id)?.total_points||0);
-  if(!id){$("manualPointsPreview").textContent="ابحث عن الطالب بالاسم أو الكود وحدده لعرض معاينة النقاط.";return}
-  if($("manualPointsValue").value===""||!Number.isInteger(value)||value<0||(mode!=="set_total"&&value===0)){
-    $("manualPointsPreview").textContent="إجمالي الطالب الحالي: "+current+" نقطة.";return
-  }
-  const next=mode==="add"?current+value:mode==="subtract"?current-value:value;
-  $("manualPointsPreview").textContent="الإجمالي الحالي: "+current+" نقطة — بعد التعديل: "+next+" نقطة.";
-}
-$("manualPointsMode").onchange=updateManualPointsLabel;
-
-$("manualPointsValue").oninput=updateManualPointsPreview;
-$("manualPointsForm").onsubmit=async e=>{
-  e.preventDefault();
-  const student=$("manualPointsStudentId").value,mode=$("manualPointsMode").value,value=Number($("manualPointsValue").value);
-  if(!student||!dashboardStudents.find(x=>x.id===student&&x.is_active)){msg("manualPointsMessage","ابحث عن الطالب واختره من النتائج قبل تنفيذ التعديل.",true);return}
-  if(!student||!Number.isInteger(value)||value<0||(mode!=="set_total"&&value===0)){
-    msg("manualPointsMessage","راجع اختيار الطالب وعدد النقاط.",true);return
-  }
-  const label=mode==="add"?"إضافة "+value+" نقطة":mode==="subtract"?"خصم "+value+" نقطة":"تحديد الإجمالي إلى "+value+" نقطة";
-  if(!window.confirm("تأكيد "+label+"؟\nسيؤثر التعديل على الإجمالي العام والتحديات النشطة."))return;
-  try{
-    $("manualPointsMessage").textContent="جاري تنفيذ التعديل...";
-    const r=await db.rpc("admin_adjust_student_points",{p_student_id:student,p_mode:mode,p_points:value,p_reason:$("manualPointsReason").value.trim()||null});
-    if(r.error)throw r.error;
-    const result=Array.isArray(r.data)?r.data[0]:r.data;
-    if(!result)throw Error("لم تصل نتيجة التعديل من قاعدة البيانات.");
-    $("manualPointsForm").reset();updateManualPointsLabel();
-    msg("manualPointsMessage",result.points_delta===0?"الإجمالي بالفعل يساوي القيمة المطلوبة، لم يحدث تغيير.":"تم التعديل بنجاح. الإجمالي: "+result.previous_total+" ← "+result.new_total+" نقطة.");
-    await loadDashboard();
-  }catch(err){msg("manualPointsMessage","تعذر تعديل النقاط: "+err.message,true)}
+ try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:x.group_level});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:x.group_level});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث اسم الطالب بنجاح.");await loadDashboard()}
+ catch(err){msg("studentManagementMessage","تعذر تعديل الاسم: "+err.message,true)}
+ finally{save.disabled=false;save.textContent="حفظ الاسم"}
 };
 function weekName(n){return ["","الأول","الثاني","الثالث","الرابع","الخامس"][n]||String(n)}
 function renderPeriodControls(monthly,weekly){
@@ -359,12 +310,16 @@ $("monthlyEndBtn").onclick=async()=>{
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الشهري: "+e.message,true)}
 };
 $("addStudentForm").onsubmit=async e=>{
- e.preventDefault();const name=$("newStudentName").value.trim(),group=$("newStudentGroup").value;if(!name||!group){msg("addStudentMessage","اكتب اسم الطالب واختر المجموعة.",true);return}
- try{$("addStudentMessage").textContent="جاري إضافة الطالب وتوليد الكود...";
+ e.preventDefault();const name=$("newStudentName").value.trim(),group=$("newStudentGroup").value;
+ if(!name||!group){msg("addStudentMessage","اكتب اسم الطالب واختر المجموعة.",true);return}
+ if(dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalizeStudentName(name))){msg("addStudentMessage","لا يمكن الإضافة: يوجد طالب مسجل بنفس الاسم بالفعل.",true);return}
+ const submit=$("addStudentForm").querySelector("button");
+ try{submit.disabled=true;submit.textContent="جاري الإضافة...";$("addStudentMessage").textContent="جاري إضافة الطالب وتوليد الكود...";
  const r=await db.rpc("admin_create_student",{p_full_name:name,p_group_level:group});if(r.error)throw r.error;
  const x=Array.isArray(r.data)?r.data[0]:r.data;if(!x?.student_code)throw Error("لم يصل كود الطالب.");
  $("addStudentForm").reset();msg("addStudentMessage","تمت إضافة "+x.full_name+" إلى مجموعة "+group+". كود الطالب: "+x.student_code+" — احتفظ بالكود.");await loadDashboard();
- }catch(err){msg("addStudentMessage","تعذر إضافة الطالب: "+err.message,true)}
+ }catch(err){const message=String(err.message||"");msg("addStudentMessage",message.includes("بنفس الاسم")?"لا يمكن الإضافة: يوجد طالب مسجل بنفس الاسم بالفعل.":"تعذر إضافة الطالب: "+message,true)}
+ finally{submit.disabled=false;submit.textContent="إضافة الطالب وتوليد الكود"}
 };
 
 loadPublicLeaderboards();
