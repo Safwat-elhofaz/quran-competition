@@ -439,3 +439,20 @@ button:disabled{opacity:.6;cursor:wait}
 @media(max-width:560px){.student-search-card{align-items:stretch;flex-direction:column;gap:11px;padding:13px}.student-search-card-actions{display:grid;grid-template-columns:1fr 1fr}.student-search-card-actions button{width:100%;padding:11px 7px}}
 .dark .student-search-card{background:#20392d;border-color:#d7b66b38}
 .dark .student-search-card-info strong{color:#f0e5c9}
+
+#studentAdminSearch{width:100%;min-height:50px;margin:8px 0 14px;border:1px solid var(--line);border-radius:14px;padding:12px 15px;background:var(--surface);font:inherit}
+.student-search-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.75fr) auto;align-items:center;gap:14px}
+.student-current-total{color:var(--green-deep);font-size:13px}
+.student-points-controls{display:grid;gap:7px;min-width:0}
+.student-points-controls label{font-size:12px;color:var(--muted);font-weight:700}
+.student-points-controls input{width:100%;min-width:0;min-height:42px;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:var(--surface);font:inherit}
+.student-points-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.student-points-actions button{padding:9px 7px;font-size:11px;white-space:nowrap}
+.student-search-card-actions{display:grid;gap:7px;min-width:100px}
+.student-search-card-actions button{padding:9px 10px;font-size:11px}
+.add-student-area{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.add-student-area h4{margin:0 0 8px;color:var(--green-deep)}
+.add-student-area .stack{gap:9px}
+@media(max-width:720px){.student-search-card{grid-template-columns:1fr;gap:12px}.student-search-card-actions{grid-template-columns:1fr 1fr;min-width:0}.student-points-actions button{font-size:12px;padding:11px 7px}.student-search-card-info strong{font-size:16px}}
+.dark #studentAdminSearch,.dark .student-points-controls input{background:#172820;color:#f3f0e7;border-color:#d7b66b38}
+.dark .student-current-total,.dark .add-student-area h4{color:#f0e5c9}
