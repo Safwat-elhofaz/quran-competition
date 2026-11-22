@@ -210,13 +210,15 @@ function renderStudentManagement(){
  const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(query)||x.student_code.includes(query)).slice(0,30);
  $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{
   const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0),disabled=x.is_active?"":"disabled";
-  return "<article class='student-search-card'><div class='student-search-card-info'><strong>"+esc(x.full_name)+"</strong><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><div class='student-points-controls'><label for='studentPoints-"+x.id+"'>عدد النقاط</label><input id='studentPoints-"+x.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+x.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+x.id+"' "+disabled+">إضافة نقاط</button></div></div><div class='student-search-card-actions'><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل الاسم</button><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف الطالب</button></div></article>"
+  return "<article class='student-search-card'><div class='student-search-card-info'><strong>"+esc(x.full_name)+"</strong><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><div class='student-points-controls'><label for='studentPoints-"+x.id+"'>عدد النقاط</label><input id='studentPoints-"+x.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+x.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+x.id+"' "+disabled+">إضافة نقاط</button></div></div><div class='student-search-card-actions'><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+x.id+"'>تعديل المجموعة</button><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف الطالب</button></div></article>"
  }).join(""):'<p class="muted-note">لا توجد نتائج مطابقة لعملية البحث.</p>';
 }
 $("studentAdminSearch").oninput=renderStudentManagement;
 $("studentManagementResults").onclick=async e=>{
  const edit=e.target.closest("[data-edit-student]");
  if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
+ const editGroup=e.target.closest("[data-edit-student-group]");
+ if(editGroup){const x=dashboardStudents.find(v=>v.id===editGroup.dataset.editStudentGroup);if(!x)return;$("editStudentGroupId").value=x.id;$("editStudentGroup").value=x.group_level||"";$("editStudentGroupForm").classList.remove("hidden");$("editStudentGroupForm").scrollIntoView({behavior:"smooth",block:"center"});return}
  const del=e.target.closest("[data-delete-student]");
  if(del){const x=dashboardStudents.find(v=>v.id===del.dataset.deleteStudent);if(!x)return;if(!window.confirm("هل تريد حذف الطالب "+x.full_name+" نهائيًا؟"))return;
   try{del.disabled=true;del.textContent="جاري التنفيذ...";const r=await db.rpc("admin_delete_student_permanently",{p_student_id:x.id});if(r.error)throw r.error;msg("studentManagementMessage","تم حذف الطالب "+x.full_name+".");await loadDashboard()}
@@ -231,6 +233,16 @@ $("studentManagementResults").onclick=async e=>{
  catch(err){button.disabled=false;button.textContent=set?"تعديل الإجمالي":"إضافة نقاط";msg("studentManagementMessage","تعذر تعديل النقاط: "+err.message,true)}
 };
 $("cancelStudentEdit").onclick=()=>{$("editStudentForm").classList.add("hidden");$("editStudentForm").reset()};
+$("cancelStudentGroupEdit").onclick=()=>{$("editStudentGroupForm").classList.add("hidden");$("editStudentGroupForm").reset()};
+$("editStudentGroupForm").onsubmit=async e=>{
+ e.preventDefault();const id=$("editStudentGroupId").value,x=dashboardStudents.find(v=>v.id===id),group=$("editStudentGroup").value;
+ if(!x||!group){msg("studentManagementMessage","اختر مجموعة صحيحة للطالب.",true);return}
+ if(group===x.group_level){msg("studentManagementMessage","الطالب بالفعل ضمن هذه المجموعة.");$("editStudentGroupForm").classList.add("hidden");return}
+ const save=$("editStudentGroupForm").querySelector("button.primary");
+ try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:x.full_name,p_group_level:group});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:x.full_name,old_group:x.group_level,new_group:group});$("editStudentGroupForm").classList.add("hidden");$("editStudentGroupForm").reset();msg("studentManagementMessage","تم تحديث المجموعة المستهدفة للطالب "+x.full_name+" إلى "+group+".");await loadDashboard()}
+ catch(err){msg("studentManagementMessage","تعذر تعديل المجموعة: "+err.message,true)}
+ finally{save.disabled=false;save.textContent="حفظ المجموعة"}
+};
 $("editStudentForm").onsubmit=async e=>{
  e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim();
  if(!x||!name){msg("studentManagementMessage","اكتب اسمًا صحيحًا للطالب.",true);return}
