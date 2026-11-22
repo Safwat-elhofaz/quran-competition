@@ -20,6 +20,9 @@ let pendingAdmin=null;
 let dashboardStudents=[];
 let dashboardRanked=[];
 let dashboardRankById=new Map();
+let selectedAdminStudentId=null;
+let adminStudentEntries=null;
+let adminStudentEntriesLoading=false;
 function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"});if(id==="homeView")loadPublicLeaderboards()}
 function msg(id,t,bad=false){$(id).textContent=t;$(id).style.color=bad?"#f1a39a":"#b58b3b"}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -216,17 +219,105 @@ async function loadManualAdjustmentHistory(students,admins){
   }).join(""):'<tr><td colspan="6">لا توجد تعديلات يدوية حتى الآن</td></tr>';
 }
 function normalizeStudentName(value){return String(value||"").trim().toLocaleLowerCase("ar")}
+function adminRankFor(rows,id){
+ const sorted=[...rows].sort((a,b)=>Number(b.total_points||0)-Number(a.total_points||0)||String(a.full_name||"").localeCompare(String(b.full_name||""),"ar"));
+ let rank=0,previous=null;
+ for(let i=0;i<sorted.length;i++){
+  const points=Number(sorted[i].total_points||0);
+  if(i===0||points!==previous)rank=i+1;
+  if(sorted[i].student_id===id)return rank;
+  previous=points;
+ }
+ return null;
+}
+function adminDateKey(date){
+ const d=new Date(date);
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function adminMonthKey(date){
+ const d=new Date(date);
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function renderAdminStudentProfile(student){
+ const totalRow=dashboardRanked.find(y=>y.student_id===student.id);
+ const total=Number(totalRow?.total_points||0),currentLevel=level(total),group=student.group_level||"غير محددة";
+ const disabled=student.is_active?"":"disabled";
+ const entries=Array.isArray(adminStudentEntries)?adminStudentEntries:[];
+ const now=new Date(),dayMs=86400000,start7=new Date(now.getTime()-7*dayMs),start14=new Date(now.getTime()-14*dayMs);
+ const pointsBetween=(from,to)=>entries.filter(e=>{const d=new Date(e.created_at);return d>=from&&d<to}).reduce((sum,e)=>sum+Number(e.points_delta||0),0);
+ const last7=pointsBetween(start7,new Date(now.getTime()+1000)),previous7=pointsBetween(start14,start7);
+ const monthStartDate=new Date(now.getFullYear(),now.getMonth(),1);
+ const monthPoints=pointsBetween(monthStartDate,new Date(now.getTime()+1000));
+ const earned=entries.reduce((sum,e)=>sum+Math.max(0,Number(e.points_delta||0)),0);
+ const deducted=entries.reduce((sum,e)=>sum+Math.abs(Math.min(0,Number(e.points_delta||0))),0);
+ const positiveEntries=entries.filter(e=>Number(e.points_delta)>0).length;
+ const activeMembers=dashboardStudents.filter(s=>s.is_active);
+ const totalsFor=members=>members.map(s=>({student_id:s.id,full_name:s.full_name,total_points:Number(dashboardRanked.find(t=>t.student_id===s.id)?.total_points||0)}));
+ const allRows=totalsFor(activeMembers);
+ const groupRows=totalsFor(activeMembers.filter(s=>s.group_level===student.group_level));
+ const levelRows=totalsFor(activeMembers.filter(s=>level(Number(dashboardRanked.find(t=>t.student_id===s.id)?.total_points||0))===currentLevel));
+ const overallRank=adminRankFor(allRows,student.id),groupRank=adminRankFor(groupRows,student.id),levelRank=adminRankFor(levelRows,student.id);
+ const change=last7-previous7;
+ const trendText=change>0?"تحسن عن السبعة أيام السابقة بـ "+change.toLocaleString("en-US")+" نقطة":change<0?"أقل من السبعة أيام السابقة بـ "+Math.abs(change).toLocaleString("en-US")+" نقطة":"نفس معدل السبعة أيام السابقة";
+ const days=[];
+ for(let i=13;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i);const key=adminDateKey(d);const value=entries.filter(e=>adminDateKey(e.created_at)===key).reduce((s,e)=>s+Number(e.points_delta||0),0);days.push({key,label:d.toLocaleDateString("ar-EG",{day:"numeric",month:"short"}),value})}
+ const dayMax=Math.max(1,...days.map(d=>Math.abs(d.value)));
+ const dailyBars=days.map(d=>"<div class='admin-performance-bar-col'><div class='admin-performance-bar-value'>"+(d.value?d.value.toLocaleString("en-US"):"")+"</div><div class='admin-performance-bar-track'><i style='height:"+Math.max(d.value?4:0,Math.abs(d.value)/dayMax*100)+"%;' class='"+(d.value<0?"is-negative":"")+"'></i></div><small>"+esc(d.label)+"</small></div>").join("");
+ const months=[];
+ for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1),key=adminMonthKey(d);const value=entries.filter(e=>adminMonthKey(e.created_at)===key).reduce((s,e)=>s+Number(e.points_delta||0),0);months.push({label:d.toLocaleDateString("ar-EG",{month:"short"}),value})}
+ const monthMax=Math.max(1,...months.map(m=>Math.abs(m.value)));
+ const monthlyBars=months.map(m=>"<div class='admin-performance-bar-col'><div class='admin-performance-bar-value'>"+(m.value?m.value.toLocaleString("en-US"):"")+"</div><div class='admin-performance-bar-track'><i style='height:"+Math.max(m.value?4:0,Math.abs(m.value)/monthMax*100)+"%;' class='"+(m.value<0?"is-negative":"")+"'></i></div><small>"+esc(m.label)+"</small></div>").join("");
+ const recent=entries.slice(-8).reverse();
+ const recentRows=recent.length?recent.map(e=>"<tr><td>"+new Date(e.created_at).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})+"</td><td class='"+(Number(e.points_delta)<0?"negative-points":"positive-points")+"'>"+(Number(e.points_delta)>0?"+":"")+Number(e.points_delta).toLocaleString("en-US")+"</td><td>"+esc(e.adjustment_reason||"تعديل نقاط")+"</td><td>"+Number(e.new_total??0).toLocaleString("en-US")+"</td></tr>").join(""):"<tr><td colspan='4'>لا توجد عمليات مسجلة لهذا الطالب حتى الآن.</td></tr>";
+ return "<div class='admin-student-profile-view'>"+
+  "<button type='button' class='secondary admin-profile-back' data-back-admin-student>← الرجوع لنتائج البحث</button>"+
+  "<section class='admin-student-summary'><div class='eyebrow'>الملف الشخصي للطالب</div><h2>"+esc(student.full_name)+"</h2><div class='admin-student-meta'><span>الكود: "+esc(student.student_code)+"</span><span>المجموعة المستهدفة: "+esc(group)+"</span><span>الحالة: "+(student.is_active?"نشط":"موقوف")+"</span><span>مستوى النقاط: "+esc(currentLevel)+"</span></div><div class='admin-student-total'><small>إجمالي النقاط الحالي</small><strong>"+total.toLocaleString("en-US")+"</strong><span>نقطة</span></div></section>"+
+  "<section class='admin-student-tools'><h3>إدارة الطالب</h3><div class='admin-student-points-control'><label for='studentPoints-"+student.id+"'>عدد النقاط</label><input id='studentPoints-"+student.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+student.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+student.id+"' "+disabled+">إضافة نقاط</button></div></div><div class='student-search-card-actions admin-profile-actions'><button type='button' class='history-btn' data-edit-student='"+student.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+student.id+"'>تعديل المجموعة</button><button type='button' class='danger-btn' data-delete-student='"+student.id+"'>حذف الطالب</button></div></section>"+
+  "<section class='admin-performance-section'><h3>مؤشرات الأداء</h3><p class='muted-note'>المؤشرات محسوبة من سجل عمليات النقاط الفعلي المتاح للطالب.</p><div class='admin-performance-kpis'><article><small>نقاط آخر 7 أيام</small><strong>"+last7.toLocaleString("en-US")+"</strong></article><article><small>نقاط الشهر الحالي</small><strong>"+monthPoints.toLocaleString("en-US")+"</strong></article><article><small>متوسط اليوم خلال أسبوع</small><strong>"+(last7/7).toFixed(1)+"</strong></article><article><small>عمليات إضافة النقاط</small><strong>"+positiveEntries.toLocaleString("en-US")+"</strong></article><article><small>إجمالي المضاف</small><strong>"+earned.toLocaleString("en-US")+"</strong></article><article><small>إجمالي المخصوم</small><strong>"+deducted.toLocaleString("en-US")+"</strong></article></div><p class='admin-performance-trend'>"+esc(trendText)+"</p></section>"+
+  "<section class='admin-performance-section'><h3>تطور النقاط اليومي</h3><p class='muted-note'>صافي النقاط المسجلة يوميًا خلال آخر 14 يومًا.</p><div class='admin-performance-chart'>"+dailyBars+"</div></section>"+
+  "<section class='admin-performance-section'><h3>معدل الأداء الشهري</h3><p class='muted-note'>صافي النقاط المسجلة خلال آخر 6 أشهر.</p><div class='admin-performance-chart admin-month-chart'>"+monthlyBars+"</div></section>"+
+  "<section class='admin-performance-section'><h3>ترتيب الطالب</h3><div class='admin-performance-ranks'><article><small>الترتيب العام</small><strong>"+(overallRank??"—")+"</strong><span>من "+allRows.length+" طالب نشط</span></article><article><small>ترتيبه في المجموعة</small><strong>"+(groupRank??"—")+"</strong><span>"+esc(group)+" · "+groupRows.length+" طالب</span></article><article><small>ترتيبه في مستوى النقاط</small><strong>"+(levelRank??"—")+"</strong><span>"+esc(currentLevel)+" · "+levelRows.length+" طالب</span></article></div></section>"+
+  "<section class='admin-performance-section'><h3>آخر عمليات النقاط</h3><div class='table-wrap'><table><thead><tr><th>التاريخ</th><th>التغيير</th><th>السبب</th><th>الإجمالي بعد العملية</th></tr></thead><tbody>"+recentRows+"</tbody></table></div></section>"+
+  "</div>";
+}
 function renderStudentManagement(){
  const query=$("studentAdminSearch").value.trim().toLocaleLowerCase("ar");
+ if(selectedAdminStudentId){
+  const student=dashboardStudents.find(x=>x.id===selectedAdminStudentId);
+  if(!student){selectedAdminStudentId=null;adminStudentEntries=null}
+  else{
+   if(adminStudentEntriesLoading){$("studentManagementResults").innerHTML="<p class='muted-note'>جاري تحميل سجل أداء الطالب...</p>";return}
+   $("studentManagementResults").innerHTML=renderAdminStudentProfile(student);return;
+  }
+ }
  if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث.</p>';return}
  const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(query)||x.student_code.includes(query)).slice(0,30);
  $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{
-  const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0),disabled=x.is_active?"":"disabled";
-  return "<article class='student-search-card'><div class='student-search-card-info'><strong>"+esc(x.full_name)+"</strong><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><div class='student-points-controls'><label for='studentPoints-"+x.id+"'>عدد النقاط</label><input id='studentPoints-"+x.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+x.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+x.id+"' "+disabled+">إضافة نقاط</button></div></div><div class='student-search-card-actions'><button type='button' class='history-btn' data-edit-student='"+x.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+x.id+"'>تعديل المجموعة</button><button type='button' class='danger-btn' data-delete-student='"+x.id+"'>حذف الطالب</button></div></article>"
+  const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
+  return "<article class='student-search-card'><div class='student-search-card-info'><button type='button' class='admin-student-name-link' data-open-admin-student='"+x.id+"'>"+esc(x.full_name)+"</button><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><button type='button' class='secondary admin-open-profile' data-open-admin-student='"+x.id+"'>فتح ملف الطالب ←</button></article>"
  }).join(""):'<p class="muted-note">لا توجد نتائج مطابقة لعملية البحث.</p>';
+}
+async function loadAdminStudentProfile(id){
+ adminStudentEntriesLoading=true;adminStudentEntries=null;renderStudentManagement();
+ try{
+  const r=await db.from("point_entries").select("created_at,points_delta,entry_type,previous_total,new_total,adjustment_reason,competition_id,weekly_challenge_id").eq("student_id",id).order("created_at",{ascending:true});
+  if(r.error)throw r.error;
+  adminStudentEntries=r.data||[];
+ }catch(error){
+  adminStudentEntries=[];
+  msg("studentManagementMessage","تعذر تحميل سجل النقاط: "+error.message,true);
+ }finally{
+  adminStudentEntriesLoading=false;
+  if(selectedAdminStudentId===id)renderStudentManagement();
+ }
 }
 $("studentAdminSearch").oninput=renderStudentManagement;
 $("studentManagementResults").onclick=async e=>{
+ const openProfile=e.target.closest("[data-open-admin-student]");
+ if(openProfile){const id=openProfile.dataset.openAdminStudent;selectedAdminStudentId=id;await loadAdminStudentProfile(id);return}
+ const backProfile=e.target.closest("[data-back-admin-student]");
+ if(backProfile){selectedAdminStudentId=null;adminStudentEntries=null;renderStudentManagement();return}
+
  const edit=e.target.closest("[data-edit-student]");
  if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
  const editGroup=e.target.closest("[data-edit-student-group]");
