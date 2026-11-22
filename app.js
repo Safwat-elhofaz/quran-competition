@@ -200,6 +200,7 @@ async function loadDashboard(){
     ranked.forEach((x,i)=>{if(i===0||x.total_points!==previousPoints)currentRank=i+1;rankById.set(x.student_id,currentRank);previousPoints=x.total_points});
     dashboardRankById=rankById;
     renderStudentManagement();
+    if(selectedAdminStudentId)loadAdminStudentProfile(selectedAdminStudentId);
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
     renderPeriodControls(c,w);await loadHistory(c)
   }catch(e){msg("addStudentMessage","تعذر تحميل البيانات: "+e.message,true)}
