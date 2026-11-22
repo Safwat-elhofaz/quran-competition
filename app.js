@@ -2,6 +2,18 @@ const SUPABASE_URL="https://rjbiahkjfmhexexssczg.supabase.co";
 const SUPABASE_KEY="sb_publishable_4_pS_PYlIamm6eXOWzGmTg_IY0mN-oR";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
+function ensureSaaiTargetGroup(){
+  ["editStudentGroup","newStudentGroup"].forEach(id=>{
+    const select=$(id);
+    if(select && !Array.from(select.options).some(option=>option.value==="الساعي")){
+      const option=document.createElement("option");
+      option.value="الساعي";
+      option.textContent="الساعي";
+      select.appendChild(option);
+    }
+  });
+}
+ensureSaaiTargetGroup();
 const views=["homeView","studentView","adminLoginView","changePasswordView","adminView"];
 const levels=[{points:75,name:"الساعي"},{points:100,name:"البرونزي"},{points:150,name:"الفضي"},{points:200,name:"الذهبي"},{points:250,name:"الماسي"},{points:300,name:"الملكي"}];
 let pendingAdmin=null;
