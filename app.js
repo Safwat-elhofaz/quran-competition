@@ -36,14 +36,20 @@ async function writeAudit(user,action,type,id,details={}){const r=await db.from(
 function dateText(value){if(!value)return "—";return new Date(value+"T00:00:00").toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"})}
 
 let publicLeaderboardData=null;
-function leaderboardRows(rows){
- if(!rows?.length)return '<tr><td colspan="3" class="leaderboard-empty">لا يوجد طلاب في هذا المستوى حتى الآن.</td></tr>';
- return rows.map(x=>'<tr><td><span class="leaderboard-rank rank-'+x.rank+'">'+x.rank+'</span></td><td class="leaderboard-student">'+esc(x.name)+'</td><td class="leaderboard-points">'+Number(x.points).toLocaleString("en-US")+'</td></tr>').join("");
+function targetGroupThreshold(name){
+ return {"الساعي":75,"البرونزي":100,"الفضي":150,"الذهبي":200,"الماسي":250,"الملكي":300}[name]||null;
+}
+function leaderboardRows(rows,groupName=null){
+ if(!rows?.length)return '<tr><td colspan="3" class="leaderboard-empty">لا يوجد طلاب في هذه المجموعة حتى الآن.</td></tr>';
+ return rows.map(x=>{
+  const threshold=targetGroupThreshold(groupName),status=threshold===null?"":Number(x.points)>=threshold?"<small class='leaderboard-progress-status is-reached'>حقق المجموعة</small>":"<small class='leaderboard-progress-status'>لسه في الطريق</small>";
+  return '<tr><td><span class="leaderboard-rank rank-'+x.rank+'">'+x.rank+'</span></td><td class="leaderboard-student">'+esc(x.name)+'</td><td class="leaderboard-points">'+Number(x.points).toLocaleString("en-US")+status+'</td></tr>';
+ }).join("");
 }
 function renderLevelLeaderboard(){
- const levelName=$("leaderboardLevelSelect").value;
- const rows=publicLeaderboardData?.levels?.[levelName]||[];
- $("levelLeaderboard").innerHTML=leaderboardRows(rows);
+ const groupName=$("leaderboardLevelSelect").value;
+ const rows=publicLeaderboardData?.groups?.[groupName]||[];
+ $("levelLeaderboard").innerHTML=leaderboardRows(rows,groupName);
 }
 async function loadPublicLeaderboards(){
  if(!$("overallLeaderboard"))return;
@@ -80,14 +86,14 @@ $("studentForm").onsubmit=async e=>{
  finally{button.disabled=false;button.textContent="عرض صفحتي ←"}
 };
 function renderStudentProfile(data){
- const s=data.student,monthly=data.monthly,weekly=data.weekly,total=Number(s.total_points)||0,next=s.next_level_points==null?null:Number(s.next_level_points);
+ const s=data.student,monthly=data.monthly,weekly=data.weekly,total=Number(s.total_points)||0,next=s.next_level_points==null?null:Number(s.next_level_points),performance=data.performance||{},targetRank=Number(performance.group_rank)||0,targetSize=Number(performance.group_size)||0,targetStatus=s.target_group_status||"لم تُحدد مجموعة مستهدفة";
  const base=total>=300?300:total>=250?250:total>=200?200:total>=150?150:total>=100?100:total>=75?75:0;
  const progress=next===null?100:Math.max(0,Math.min(100,((total-base)/(next-base))*100));
  const weeklyPoints=Number(weekly?.total_points)||0,monthlyPoints=Number(monthly?.total_points)||0;
  const maxChallenge=Math.max(weeklyPoints,monthlyPoints,1);
  const tiers=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300]];
  const tiersHtml=tiers.map(([name,points])=>'<div class="student-tier '+(total>=points?'is-reached':'')+'"><i></i><span>'+name+'</span><b>'+points+'</b></div>').join("");
- const performance=data.performance||{},history=Array.isArray(performance.weekly_history)?performance.weekly_history:[],neighbors=Array.isArray(performance.group_students)?performance.group_students:[];
+ const history=Array.isArray(performance.weekly_history)?performance.weekly_history:[],neighbors=Array.isArray(performance.group_students)?performance.group_students:[];
  const chartMax=Math.max(1,...history.flatMap(w=>[Number(w.points)||0,Number(w.group_average)||0]));
  const weeklyChartHtml=history.length?'<div class="student-weekly-chart">'+history.map(w=>'<div class="student-week-column"><div class="student-week-bars"><i class="student-own-bar" style="height:'+Math.max(3,(Number(w.points)||0)/chartMax*100)+'%"></i><i class="student-average-bar" style="height:'+Math.max(3,(Number(w.group_average)||0)/chartMax*100)+'%"></i></div><b>أسبوع '+Number(w.week_number)+'</b><small>'+(Number(w.points)||0)+' نقطة</small></div>').join("")+'</div><div class="student-chart-legend"><span><i class="student-own-key"></i> نقاطك</span><span><i class="student-average-key"></i> متوسط المجموعة</span></div>':'<p class="muted-note">لا توجد بيانات أسابيع مسجلة في المسابقة الحالية بعد.</p>';
  const ownVsAverage=Math.max(0,Number(performance.group_average)||0,total,1),groupOwnWidth=Math.min(100,total/ownVsAverage*100),groupAverageWidth=Math.min(100,(Number(performance.group_average)||0)/ownVsAverage*100);
@@ -97,10 +103,10 @@ function renderStudentProfile(data){
   <div class="student-report" id="studentReport">
    <div class="student-report-cover">
     <div class="student-report-brand"><span>۞</span><div><b>صفوة الحفاظ</b><small>تقرير إنجاز الطالب</small></div></div>
-    <div class="student-profile-head"><div><span class="eyebrow">صفحة الطالب</span><h2>${esc(s.full_name)}</h2><p>كود الطالب: <b>${esc(s.student_code)}</b></p><p class="student-target-group">المجموعة المستهدفة: <b>${esc(s.group_level||"لم تُحدد بعد")}</b></p></div><span class="student-level-pill">مستوى النقاط: ${esc(s.level)}</span></div>
+    <div class="student-profile-head"><div><span class="eyebrow">صفحة الطالب</span><h2>${esc(s.full_name)}</h2><p>كود الطالب: <b>${esc(s.student_code)}</b></p><p class="student-target-group">المجموعة المستهدفة: <b>${esc(s.group_level||"لم تُحدد بعد")}</b></p><p class="student-target-status ${s.target_group_reached?"is-reached":"is-progress"}">${esc(targetStatus)}</p></div><span class="student-level-pill">مستوى النقاط: ${esc(s.level)}</span></div>
     <div class="student-report-total"><span>إجمالي نقاطك</span><strong>${total.toLocaleString("en-US")}</strong><small>بالقرآن نرتقي، وبالإتقان نتميز</small></div>
    </div>
-   <div class="student-stats-grid"><article><span>ترتيبك داخل مستواك</span><strong>${Number(s.level_rank)||"—"} <small>من ${Number(s.level_size)||0}</small></strong></article><article><span>ترتيبك العام في المركز</span><strong>${Number(s.overall_rank)||"—"} <small>من ${Number(s.overall_size)||0}</small></strong></article><article><span>المجموعة المستهدفة</span><strong class="student-group-value">${esc(s.group_level||"—")}</strong></article></div>
+   <div class="student-stats-grid"><article><span>ترتيبك داخل مجموعتك المستهدفة</span><strong>${targetRank||"—"} <small>من ${targetSize}</small></strong></article><article><span>ترتيبك العام في المركز</span><strong>${Number(s.overall_rank)||"—"} <small>من ${Number(s.overall_size)||0}</small></strong></article><article><span>المجموعة المستهدفة</span><strong class="student-group-value">${esc(s.group_level||"—")}</strong></article></div>
    <section class="student-progress-card student-tier-card"><h3>مستوياتك وتقدمك</h3><div class="student-tier-scale">${tiersHtml}</div><div class="progress-label"><span>${next===null?"وصلت لأعلى مستوى":"المستوى التالي: "+esc(s.next_level)}</span><b>${next===null?"مكتمل":total+" / "+next+" نقطة"}</b></div><div class="progress-track"><span style="width:${progress}%"></span></div><p>${next===null?"ما شاء الله! وصلت إلى أعلى مستوى في نظام النقاط.":"متبقي لك "+Math.max(0,next-total)+" نقطة للوصول للمستوى التالي."}</p></section>
    <section class="student-progress-card"><h3>نشاطك في التحديات</h3><p class="student-chart-note">مقارنة نقاطك المسجلة في التحدي الأسبوعي والشهري النشط</p><div class="student-bars">
     <div class="student-bar-row"><span>الأسبوعي</span><div class="student-bar-track"><i style="width:${weeklyPoints/maxChallenge*100}%"></i></div><b>${weeklyPoints}</b></div>
@@ -113,9 +119,9 @@ function renderStudentProfile(data){
    <section class="student-progress-card student-performance-card"><h3>أداؤك أسبوعًا بعد أسبوع</h3><p class="student-chart-note">مقارنة نقاطك بمتوسط نقاط مجموعتك في كل أسبوع من المسابقة</p>${weeklyChartHtml}</section>
    <section class="student-progress-card student-group-performance"><h3>معدلات أدائك في مجموعتك</h3><div class="student-group-kpis"><div><strong>${Number(performance.group_rank)||"—"}</strong><span>ترتيبك في المجموعة</span></div><div><strong>${Number(performance.group_size)||0}</strong><span>عدد طلاب المجموعة</span></div><div><strong>${Number(performance.group_average)||0}</strong><span>متوسط نقاط المجموعة</span></div></div><div class="student-compare-row"><span>نقاطك</span><div class="student-compare-track"><i style="width:${groupOwnWidth}%"></i></div><b>${total}</b></div><div class="student-compare-row average"><span>المتوسط</span><div class="student-compare-track"><i style="width:${groupAverageWidth}%"></i></div><b>${Number(performance.group_average)||0}</b></div><p class="student-chart-note">${total>Number(performance.group_average||0)?"أنت أعلى من متوسط مجموعتك بـ "+(total-Number(performance.group_average||0))+" نقطة.":total<Number(performance.group_average||0)?"متبقي لك "+(Number(performance.group_average||0)-total)+" نقطة لتصل إلى متوسط مجموعتك.":"أنت عند متوسط مجموعتك تمامًا."}</p></section>
    <section class="student-progress-card student-nearby-card"><h3>الطلاب الأقرب لترتيبك في المجموعة</h3><p class="student-chart-note">الطالبان السابقان والطالبان التاليان في ترتيب مجموعتك</p>${neighborHtml}</section>
-   <section class="student-progress-card student-rankings"><h3>ترتيبك بين زملائك</h3><div class="student-ranking-grid">
+   <section class="student-progress-card student-rankings"><h3>ترتيبك بين زملائك في المجموعة المستهدفة</h3><div class="student-ranking-grid">
     <div><h4>أفضل الطلاب إجمالًا</h4><ol id="studentOverallTop"><li>جاري تحميل الترتيب...</li></ol></div>
-    <div><h4>أفضل الطلاب في مستواك</h4><ol id="studentLevelTop"><li>جاري تحميل الترتيب...</li></ol></div>
+    <div><h4>أفضل الطلاب في مجموعتك المستهدفة</h4><ol id="studentLevelTop"><li>جاري تحميل الترتيب...</li></ol></div>
    </div></section>
    <div class="student-report-footer"><span>أثرٌ يبقى</span><i>۞</i><span>نورٌ لا ينطفئ</span><small>هذا التقرير يعرض بيانات الطالب وقت الاستعلام</small></div>
   </div>
@@ -128,7 +134,7 @@ function renderStudentProfile(data){
 async function loadStudentReportRankings(student){
  try{
   const {data,error}=await db.rpc("public_leaderboards");if(error)throw error;
-  const overall=(data?.overall||[]).slice(0,10),byLevel=(data?.levels?.[student.level]||[]).slice(0,10);
+  const overall=(data?.overall||[]).slice(0,10),byLevel=(data?.groups?.[student.group_level]||[]).slice(0,10);
   const render=rows=>rows.length?rows.map(x=>'<li class="'+(x.name===student.full_name?'is-me':'')+'"><span>'+Number(x.rank)+'</span><b>'+esc(x.name)+(x.name===student.full_name?' (أنت)':'')+'</b><strong>'+Number(x.points).toLocaleString("en-US")+'</strong></li>').join(""):'<li>لا توجد بيانات متاحة حاليًا.</li>';
   $("studentOverallTop").innerHTML=render(overall);$("studentLevelTop").innerHTML=render(byLevel);
  }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";$("studentLevelTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
