@@ -534,3 +534,12 @@ button:disabled{opacity:.6;cursor:wait}
  .admin-profile-actions button:last-child{grid-column:1/-1}
  .admin-open-profile{width:100%}
 }
+
+/* Target-group ranking status */
+.leaderboard-progress-status{display:block;margin-top:3px;font-size:10px;font-weight:700;color:#a47724}
+.leaderboard-progress-status.is-reached{color:#168064}
+.student-target-status{display:inline-flex;margin:7px 0 0;padding:6px 11px;border-radius:999px;font-size:12px;font-weight:800}
+.student-target-status.is-progress{background:rgba(181,139,59,.14);color:#946d20}
+.student-target-status.is-reached{background:rgba(22,128,100,.12);color:#168064}
+.dark .student-target-status.is-progress{color:#e7c36e}
+.dark .student-target-status.is-reached{color:#7bd0b0}
