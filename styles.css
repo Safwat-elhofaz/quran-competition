@@ -633,3 +633,8 @@ button:disabled{opacity:.6;cursor:wait}
 .admin-topbar .dashhead{flex:1;margin:0}
 .admin-logout-footer{display:flex;justify-content:center;padding:28px 0 10px;margin-top:24px;border-top:1px solid var(--line)}
 .admin-logout-footer .secondary{min-width:180px}
+
+
+/* Keep student name and target-group editors together above performance */
+.admin-profile-editors{display:grid;gap:10px;margin-bottom:16px}
+.admin-profile-editors .student-editor{margin:0}
