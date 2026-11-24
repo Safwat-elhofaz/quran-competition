@@ -74,14 +74,14 @@ async function loadPublicChallengeArchive(){
  try{
   const {data,error}=await db.rpc("public_challenge_archive");if(error)throw error;
   const months=new Map();
-  (data||[]).forEach(x=>{if(!months.has(x.competition_id))months.set(x.competition_id,{title:x.competition_title||"التحدي الشهري",weeks:[],monthly:null});const m=months.get(x.competition_id);if(x.period_type==="monthly")m.monthly=x;else m.weeks.push(x)});
+  (data||[]).forEach(x=>{if(!months.has(x.competition_id))months.set(x.competition_id,{title:x.competition_title||"التحدي الشهري",start:x.competition_start,end:x.competition_end,weeks:[],monthly:null});const m=months.get(x.competition_id);if(x.period_type==="monthly")m.monthly=x;else m.weeks.push(x)});
   if(!months.size){host.innerHTML="<p class='muted-note'>لا توجد تحديات مؤرشفة حتى الآن.</p>";return}
   host.innerHTML=Array.from(months.values()).map(m=>{
    const names=["الأول","الثاني","الثالث","الرابع","الخامس"];
    const weeks=Array.from({length:5},(_,i)=>m.weeks.find(w=>Number(w.week_number)===i+1));
    const rows=weeks.map((w,i)=>w?"<div class='public-archive-week'><div><b>الأسبوع "+names[i]+"</b><small>"+dateText(w.period_start)+" – "+dateText(w.period_end)+"</small></div><button class='history-btn public-archive-result' data-public-type='weekly' data-public-id='"+w.period_id+"'>أفضل 10</button></div>":"<div class='public-archive-week is-missing'><div><b>الأسبوع "+names[i]+"</b><small>لم يُؤرشف بعد</small></div></div>").join("");
    const monthly=m.monthly?"<button class='history-btn public-archive-result' data-public-type='monthly' data-public-id='"+m.monthly.period_id+"'>أفضل 10 في الشهر</button>":"<p class='muted-note'>نتيجة الشهر ستظهر بعد انتهاء التحدي الشهري.</p>";
-   return "<details class='public-archive-month'><summary><span>"+esc(m.title)+"</span><small>"+m.weeks.length+" من 5 أسابيع مؤرشفة</small></summary><div class='public-archive-body'><div class='public-archive-weeks'>"+rows+"</div><div class='public-archive-month-result'>"+monthly+"</div><div class='public-archive-results hidden'></div></div></details>";
+   return "<details class='public-archive-month'><summary><span>"+esc(m.title)+"</span><small>"+dateText(m.start)+" – "+dateText(m.end)+" · "+m.weeks.length+" من 5 أسابيع مؤرشفة</small></summary><div class='public-archive-body'><div class='public-archive-weeks'>"+rows+"</div><div class='public-archive-month-result'>"+monthly+"</div><div class='public-archive-results hidden'></div></div></details>";
   }).join("");
   host.querySelectorAll(".public-archive-result").forEach(btn=>btn.onclick=async()=>{
    const box=btn.closest(".public-archive-month").querySelector(".public-archive-results");btn.disabled=true;
