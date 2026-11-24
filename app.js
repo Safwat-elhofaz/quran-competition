@@ -23,6 +23,7 @@ let dashboardRankById=new Map();
 let selectedAdminStudentId=null;
 let adminStudentEntries=null;
 let adminStudentEntriesLoading=false;
+let currentAchievementData=null;
 function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"});if(id==="homeView")loadPublicLeaderboards()}
 function msg(id,t,bad=false){$(id).textContent=t;$(id).style.color=bad?"#f1a39a":"#b58b3b"}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -132,13 +133,43 @@ function renderAchievementCard(data){
  .replace("__REMAIN__",targetPoints?(total>=targetPoints?"تم تحقيق الهدف":"باقي "+(targetPoints-total)+" نقطة"):"لا يوجد هدف محدد")
  .replace("__GRAPH__",graph).replace("__SUMMARY__",summary);
 }
+function createAchievementExportStage(){
+ if(!currentAchievementData)throw Error("بيانات كارت الإنجاز غير متاحة");
+ const holder=document.createElement("div");
+ holder.className="achievement-export-stage";
+ holder.innerHTML=renderAchievementCard(currentAchievementData);
+ const card=holder.querySelector("#studentAchievementCard");
+ if(!card)throw Error("تعذر تجهيز تصميم الكارت");
+ const style=document.createElement("style");
+ style.textContent=`
+ .achievement-export-stage{position:fixed!important;left:-12000px!important;top:0!important;width:1080px!important;height:1920px!important;z-index:-1!important;overflow:hidden!important;direction:rtl!important}
+ .achievement-export-stage .achievement-preview-wrap{display:block!important;width:1080px!important;height:1920px!important;margin:0!important}
+ .achievement-export-stage .achievement-preview-heading{display:none!important}
+ .achievement-export-stage .achievement-card{box-sizing:border-box!important;width:1080px!important;height:1920px!important;min-height:1920px!important;max-height:1920px!important;aspect-ratio:auto!important;overflow:hidden!important;padding:58px 66px!important;gap:17px!important;border:7px solid #e5c46a!important;border-radius:16px!important;outline:2px solid rgba(229,196,106,.4)!important;outline-offset:-20px!important;box-shadow:none!important;justify-content:space-between!important}
+ .achievement-export-stage .achievement-card-header{padding-bottom:16px!important;gap:16px!important}
+ .achievement-export-stage .achievement-card-header b{font-size:42px!important}.achievement-export-stage .achievement-card-header small{font-size:24px!important}.achievement-export-stage .achievement-mark{font-size:40px!important}
+ .achievement-export-stage .achievement-student-name{gap:7px!important}.achievement-export-stage .achievement-student-name h2{font-size:54px!important;line-height:1.35!important}.achievement-export-stage .achievement-student-name span{font-size:29px!important}
+ .achievement-export-stage .achievement-total{gap:18px!important}.achievement-export-stage .achievement-total strong{font-size:132px!important}.achievement-export-stage .achievement-total span{font-size:34px!important}
+ .achievement-export-stage .achievement-ranks{gap:18px!important}.achievement-export-stage .achievement-ranks>div{min-height:174px!important;padding:18px 10px!important;gap:8px!important;border-radius:22px!important}.achievement-export-stage .achievement-ranks small{font-size:23px!important}.achievement-export-stage .achievement-ranks b{font-size:37px!important;line-height:1.35!important}
+ .achievement-export-stage .achievement-goal{padding:24px 28px!important;border-radius:24px!important}.achievement-export-stage .achievement-goal-head{font-size:32px!important}.achievement-export-stage .achievement-goal-progress{height:20px!important;margin:20px 0 14px!important}.achievement-export-stage .achievement-goal-foot{font-size:24px!important}
+ .achievement-export-stage .achievement-journey{padding:18px 22px 14px!important;border-radius:24px!important}.achievement-export-stage .achievement-journey h3,.achievement-export-stage .achievement-summary h3{font-size:34px!important;margin-bottom:10px!important}
+ .achievement-export-stage .achievement-chart{max-height:220px!important}.achievement-export-stage .achievement-chart-legend{font-size:22px!important;gap:28px!important}.achievement-export-stage .achievement-chart-empty{min-height:130px!important;font-size:23px!important}
+ .achievement-export-stage .achievement-summary{padding:18px 22px!important;border-radius:22px!important}.achievement-export-stage .achievement-summary ol{gap:5px!important}.achievement-export-stage .achievement-summary li{grid-template-columns:30px minmax(0,1fr)!important;gap:10px!important;padding:5px 0!important}.achievement-export-stage .achievement-summary li>span{width:27px!important;height:27px!important;font-size:17px!important}.achievement-export-stage .achievement-summary li p{font-size:21px!important;line-height:1.42!important}
+ .achievement-export-stage .achievement-card-footer{padding-top:12px!important;font-size:25px!important}
+ @media print{.achievement-export-stage{position:static!important;left:auto!important;top:auto!important;width:108mm!important;height:192mm!important;overflow:hidden!important}.achievement-export-stage .achievement-preview-wrap{width:108mm!important;height:192mm!important}.achievement-export-stage .achievement-card{width:108mm!important;height:192mm!important;min-height:192mm!important;max-height:192mm!important;padding:6mm 7mm!important;border-width:1mm!important;outline-offset:-3mm!important;gap:1.7mm!important}.achievement-export-stage .achievement-card-header{padding-bottom:1.6mm!important}.achievement-export-stage .achievement-card-header b{font-size:4.2mm!important}.achievement-export-stage .achievement-card-header small{font-size:2.4mm!important}.achievement-export-stage .achievement-mark{font-size:4mm!important}.achievement-export-stage .achievement-student-name h2{font-size:5.4mm!important}.achievement-export-stage .achievement-student-name span{font-size:2.9mm!important}.achievement-export-stage .achievement-total strong{font-size:13.2mm!important}.achievement-export-stage .achievement-total span{font-size:3.4mm!important}.achievement-export-stage .achievement-ranks>div{min-height:17.4mm!important}.achievement-export-stage .achievement-ranks small{font-size:2.3mm!important}.achievement-export-stage .achievement-ranks b{font-size:3.7mm!important}.achievement-export-stage .achievement-goal-head{font-size:3.2mm!important}.achievement-export-stage .achievement-goal-foot{font-size:2.4mm!important}.achievement-export-stage .achievement-journey h3,.achievement-export-stage .achievement-summary h3{font-size:3.4mm!important}.achievement-export-stage .achievement-chart{max-height:22mm!important}.achievement-export-stage .achievement-chart-legend{font-size:2.2mm!important}.achievement-export-stage .achievement-summary li p{font-size:2.1mm!important}.achievement-export-stage .achievement-card-footer{font-size:2.5mm!important}}
+ `;
+ holder.prepend(style);
+ document.body.appendChild(holder);
+ return {holder,card};
+}
 function printStudentAchievementCard(){
- if(!$("studentAchievementCard"))return;
+ let stage;
+ try{stage=createAchievementExportStage()}catch(e){$("studentExportMessage").textContent=e.message;return}
  document.body.classList.add("printing-achievement-card");
- const cleanup=()=>document.body.classList.remove("printing-achievement-card");
+ const cleanup=()=>{document.body.classList.remove("printing-achievement-card");stage.holder.remove()};
  window.addEventListener("afterprint",cleanup,{once:true});
  window.print();
- setTimeout(cleanup,1800);
+ setTimeout(cleanup,2500);
 }
 
 function renderStudentProfile(data){
@@ -195,7 +226,7 @@ function renderStudentProfile(data){
  $("studentLookupAgain").onclick=()=>{$("studentProfile").classList.add("hidden");$("studentForm").classList.remove("hidden");$("studentCode").value="";$("studentMessage").textContent="";$("studentCode").focus()};
  $("studentPrintBtn").onclick=printStudentAchievementCard;
  $("studentImageBtn").onclick=saveStudentReportImage;
- $("studentProfile").insertAdjacentHTML("beforeend",renderAchievementCard(data));
+ currentAchievementData=data;
  loadStudentReportRankings(s);
 }
 async function loadStudentReportRankings(student){
@@ -207,21 +238,30 @@ async function loadStudentReportRankings(student){
  }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";$("studentLevelTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
 }
 async function saveStudentReportImage(){
- const btn=$("studentImageBtn"),status=$("studentExportMessage"),target=$("studentAchievementCard");
- if(!target)return;
+ const btn=$("studentImageBtn"),status=$("studentExportMessage");
+ if(!currentAchievementData)return;
  if(!window.html2canvas){status.textContent="ميزة حفظ الصورة لم تُحمّل بعد. حدّث الصفحة وحاول مرة أخرى.";return}
  btn.disabled=true;btn.textContent="جاري تجهيز الكارت...";
- status.textContent="لحظات، بنجهز كارت الإنجاز بمقاس الستوري...";
+ status.textContent="لحظات، بنجهز كارت الإنجاز كاملًا بمقاس الستوري...";
+ let stage=null;
  try{
-  const canvas=await window.html2canvas(target,{scale:3,backgroundColor:"#075443",useCORS:true,logging:false,windowWidth:target.scrollWidth,windowHeight:target.scrollHeight});
+  stage=createAchievementExportStage();
+  await document.fonts.ready;
+  const canvas=await window.html2canvas(stage.card,{scale:1.5,backgroundColor:"#075443",useCORS:true,logging:false,width:1080,height:1920,windowWidth:1080,windowHeight:1920,scrollX:0,scrollY:0});
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
   if(!blob)throw Error("تعذر إنشاء ملف الصورة");
   const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download="كارت-إنجاز-صفوة-الحفاظ-"+($("studentProfile").querySelector(".student-profile-head h2")?.textContent||"الطالب").replace(/[^\u0600-\u06FF\w-]+/g,"-")+".png";
-  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-  status.textContent="تم تجهيز كارت الإنجاز صورة بنجاح.";
- }catch(e){status.textContent="حصلت مشكلة أثناء حفظ الكارت. جرّب مرة أخرى أو استخدم PDF."}
- finally{btn.disabled=false;btn.textContent="🖼️ حفظ كارت الإنجاز صورة"}
+  const studentName=currentAchievementData.student.full_name||"الطالب";
+  a.href=url;a.download="كارت-إنجاز-صفوة-الحفاظ-"+studentName.replace(/[^\u0600-\u06FF\w-]+/g,"-")+".png";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+  status.textContent="تم حفظ كارت الإنجاز كاملًا بمقاس الستوري.";
+ }catch(e){
+  console.error("Achievement export failed:",e);
+  status.textContent="حصلت مشكلة أثناء تجهيز الصورة. جرّب مرة أخرى.";
+ }finally{
+  if(stage)stage.holder.remove();
+  btn.disabled=false;btn.textContent="🖼️ حفظ التقرير صورة";
+ }
 }
 async function routeAdmin(user){
   const a=await db.from("admin_profiles").select("username,display_name,is_active,must_change_password").eq("user_id",user.id).maybeSingle();
