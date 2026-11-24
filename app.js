@@ -523,3 +523,4 @@ $("addStudentForm").onsubmit=async e=>{
 
 loadPublicLeaderboards();
 (async()=>{const r=await db.auth.getSession();if(r.data.session){try{await routeAdmin(r.data.session.user)}catch(e){await db.auth.signOut()}}})();
+
