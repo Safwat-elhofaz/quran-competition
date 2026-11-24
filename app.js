@@ -85,6 +85,62 @@ $("studentForm").onsubmit=async e=>{
  }catch(err){msg("studentMessage",err.message||"تعذر تنفيذ الاستعلام حاليًا.",true)}
  finally{button.disabled=false;button.textContent="عرض صفحتي ←"}
 };
+function renderAchievementCard(data){
+ const s=data.student,performance=data.performance||{},total=Number(s.total_points)||0;
+ const history=Array.isArray(performance.weekly_history)?performance.weekly_history:[];
+ const groupAverage=Number(performance.group_average)||0;
+ const targetPoints=targetGroupThreshold(s.group_level);
+ const targetPercent=targetPoints?Math.min(100,Math.round(total/targetPoints*100)):null;
+ const groupStudents=Array.isArray(performance.group_students)?[...performance.group_students]:[];
+ groupStudents.sort((a,b)=>Number(b.points)-Number(a.points));
+ const leader=groupStudents[0]||null;
+ const gap=leader?Math.max(0,Number(leader.points)-total):null;
+ const rank=Number(s.overall_rank)||0,size=Number(s.overall_size)||0;
+ const topPercent=rank&&size?Math.min(100,Math.ceil(rank/size*100)):null;
+ const avgDiff=groupAverage?Math.round((total-groupAverage)/groupAverage*100):null;
+ const avgLine=!groupAverage?"لا تتوفر بيانات كافية لمتوسط المجموعة.":total>=groupAverage?"أعلى من متوسط المجموعة بـ "+(total-groupAverage)+" نقطة ("+Math.abs(avgDiff)+"%).":"أقل من متوسط المجموعة بـ "+(groupAverage-total)+" نقطة ("+Math.abs(avgDiff)+"%).";
+ const goalLine=targetPoints?(total>=targetPoints?"حققت هدف المجموعة ("+targetPoints+" نقطة).":"باقي "+(targetPoints-total)+" نقطة لتحقيق هدف المجموعة."):"لم تُحدد مجموعة مستهدفة لهذا الطالب.";
+ const trend=history.length>1?(Number(history[history.length-1].points)||0)-(Number(history[history.length-2].points)||0):null;
+ const trendLine=trend===null?"لم تكتمل بيانات المقارنة الأسبوعية بعد.":trend>0?"تقدم هذا الأسبوع بـ "+trend+" نقطة عن السابق.":trend<0?"انخفض رصيدك بـ "+Math.abs(trend)+" نقطة عن السابق.":"حافظت على نفس رصيد الأسبوع السابق.";
+ const rankLine=topPercent===null?"ترتيبك النسبي غير متاح حاليًا.":"ضمن أعلى "+topPercent+"% من المركز.";
+ const weeklyLine=history.length?"نقاطك أسبوعيًا: "+history.map(w=>"أ"+Number(w.week_number)+": "+(Number(w.points)||0)).join(" · "):"النقاط الأسبوعية: لا توجد بيانات مسجلة.";
+ const leaderLine=gap===null?"الفارق عن الأول غير متاح حاليًا.":gap===0?"أنت صاحب المركز الأول في مجموعتك.":"يفصلك عن صاحب المركز الأول "+gap+" نقطة.";
+ const lines=[goalLine,avgLine,trendLine,rankLine,weeklyLine,leaderLine];
+ const max=Math.max(1,...history.flatMap(w=>[Number(w.points)||0,Number(w.group_average)||0]));
+ const w=620,h=155,px=26,py=17;
+ const coords=key=>history.map((v,i)=>({x:history.length===1?w/2:px+i*(w-2*px)/(history.length-1),y:h-py-(Number(v[key])||0)/max*(h-2*py)}));
+ const path=pts=>pts.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
+ const own=coords("points"),avg=coords("group_average");
+ const graph=history.length?'<svg class="achievement-chart" viewBox="0 0 620 155" role="img" aria-label="تطور نقاط الطالب ومتوسط المجموعة"><line x1="20" y1="135" x2="600" y2="135"/><line x1="20" y1="77" x2="600" y2="77"/><line x1="20" y1="19" x2="600" y2="19"/><path class="achievement-average-line" d="'+path(avg)+'"/><path class="achievement-own-line" d="'+path(own)+'"/>'+own.map(p=>'<circle class="achievement-own-dot" cx="'+p.x+'" cy="'+p.y+'" r="5"/>').join("")+'<text x="25" y="151">البداية</text><text x="595" y="151" text-anchor="end">الآن</text></svg>':'<div class="achievement-chart-empty">لا توجد بيانات أسبوعية كافية لرسم التطور بعد</div>';
+ const summary=lines.map((v,i)=>'<li><span>'+(i+1)+'</span><p>'+esc(v)+'</p></li>').join("");
+ const groupRank=Number(performance.group_rank)||0,groupSize=Number(performance.group_size)||0;
+ return `<section class="achievement-preview-wrap"><div class="achievement-preview-heading"><b>كارت الإنجاز الجاهز للمشاركة</b><small>مقاس رأسي مناسب للستوري 9:16</small></div><article class="achievement-card" id="studentAchievementCard" dir="rtl">
+ <header class="achievement-card-header"><span class="achievement-mark">۞</span><div><b>مركز صفوة الحفاظ</b><small>مسابقة النقاط · بطاقة إنجاز الطالب</small></div><span class="achievement-mark">۞</span></header>
+ <div class="achievement-student-name"><h2>__NAME__</h2><span>المجموعة المستهدفة: __GROUP__</span></div>
+ <div class="achievement-total"><strong>__TOTAL__</strong><span>نقطة</span></div>
+ <div class="achievement-ranks"><div><small>المستوى الحالي</small><b>__LEVEL__</b></div><div><small>ترتيب المجموعة</small><b>__GRANK__ من __GSIZE__</b></div><div><small>الترتيب العام</small><b>__RANK__ من __SIZE__</b></div></div>
+ <section class="achievement-goal"><div class="achievement-goal-head"><b>هدفك القادم</b><strong>__TARGET__</strong></div><div class="achievement-goal-progress"><i style="width:__PERCENT__%"></i></div><div class="achievement-goal-foot"><span>نسبة التقدم __PERCENT__%</span><span>__REMAIN__</span></div></section>
+ <section class="achievement-journey"><h3>رحلة تقدمك</h3>__GRAPH__<div class="achievement-chart-legend"><span><i></i> نقاطك</span><span><i></i> متوسط مجموعتك</span></div></section>
+ <section class="achievement-summary"><h3>إنجازك في سطور</h3><ol>__SUMMARY__</ol></section>
+ <footer class="achievement-card-footer">بالقرآن نرتقي، وبالإتقان نتميز</footer></article></section>`
+ .replace("__NAME__",esc(s.full_name)).replace("__GROUP__",esc(s.group_level||"غير محددة"))
+ .replace("__TOTAL__",total.toLocaleString("en-US")).replace("__LEVEL__",esc(s.level||"بدون مستوى"))
+ .replace("__GRANK__",groupRank||"—").replace("__GSIZE__",groupSize||"—")
+ .replace("__RANK__",rank||"—").replace("__SIZE__",size||"—")
+ .replace("__TARGET__",targetPoints?targetPoints+" نقطة":"غير محدد")
+ .replaceAll("__PERCENT__",targetPercent===null?"0":String(targetPercent))
+ .replace("__REMAIN__",targetPoints?(total>=targetPoints?"تم تحقيق الهدف":"باقي "+(targetPoints-total)+" نقطة"):"لا يوجد هدف محدد")
+ .replace("__GRAPH__",graph).replace("__SUMMARY__",summary);
+}
+function printStudentAchievementCard(){
+ if(!$("studentAchievementCard"))return;
+ document.body.classList.add("printing-achievement-card");
+ const cleanup=()=>document.body.classList.remove("printing-achievement-card");
+ window.addEventListener("afterprint",cleanup,{once:true});
+ window.print();
+ setTimeout(cleanup,1800);
+}
+
 function renderStudentProfile(data){
  const s=data.student,monthly=data.monthly,weekly=data.weekly,total=Number(s.total_points)||0,next=s.next_level_points==null?null:Number(s.next_level_points),performance=data.performance||{},targetRank=Number(performance.group_rank)||0,targetSize=Number(performance.group_size)||0,targetStatus=s.target_group_status||"لم تُحدد مجموعة مستهدفة";
  const base=total>=300?300:total>=250?250:total>=200?200:total>=150?150:total>=100?100:total>=75?75:0;
@@ -137,8 +193,9 @@ function renderStudentProfile(data){
   </div>
   <div class="student-profile-actions"><button type="button" class="secondary" id="studentPrintBtn">🖨️ طباعة / حفظ PDF</button><button type="button" class="secondary" id="studentImageBtn">🖼️ حفظ التقرير صورة</button><button type="button" class="primary" id="studentLookupAgain">استعلام بكود آخر</button></div><p id="studentExportMessage" class="message" aria-live="polite"></p>`;
  $("studentLookupAgain").onclick=()=>{$("studentProfile").classList.add("hidden");$("studentForm").classList.remove("hidden");$("studentCode").value="";$("studentMessage").textContent="";$("studentCode").focus()};
- $("studentPrintBtn").onclick=()=>window.print();
+ $("studentPrintBtn").onclick=printStudentAchievementCard;
  $("studentImageBtn").onclick=saveStudentReportImage;
+ $("studentProfile").insertAdjacentHTML("beforeend",renderAchievementCard(data));
  loadStudentReportRankings(s);
 }
 async function loadStudentReportRankings(student){
@@ -150,21 +207,21 @@ async function loadStudentReportRankings(student){
  }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";$("studentLevelTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
 }
 async function saveStudentReportImage(){
- const btn=$("studentImageBtn"),status=$("studentExportMessage"),target=$("studentReport");
+ const btn=$("studentImageBtn"),status=$("studentExportMessage"),target=$("studentAchievementCard");
  if(!target)return;
  if(!window.html2canvas){status.textContent="ميزة حفظ الصورة لم تُحمّل بعد. حدّث الصفحة وحاول مرة أخرى.";return}
- btn.disabled=true;btn.textContent="جاري تجهيز الصورة...";
- status.textContent="لحظات، بنجهز صورة التقرير كاملة...";
+ btn.disabled=true;btn.textContent="جاري تجهيز الكارت...";
+ status.textContent="لحظات، بنجهز كارت الإنجاز بمقاس الستوري...";
  try{
-  const canvas=await window.html2canvas(target,{scale:2,backgroundColor:document.body.classList.contains("dark")?"#14221b":"#f8f7f1",useCORS:true,logging:false,windowWidth:Math.max(target.scrollWidth,document.documentElement.clientWidth)});
+  const canvas=await window.html2canvas(target,{scale:3,backgroundColor:"#075443",useCORS:true,logging:false,windowWidth:target.scrollWidth,windowHeight:target.scrollHeight});
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
   if(!blob)throw Error("تعذر إنشاء ملف الصورة");
   const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download="تقرير-صفوة-الحفاظ-"+($("studentProfile").querySelector(".student-profile-head h2")?.textContent||"الطالب").replace(/[^\u0600-\u06FF\w-]+/g,"-")+".png";
-  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-  status.textContent="تم تجهيز صورة التقرير بنجاح.";
- }catch(e){status.textContent="حصلت مشكلة أثناء حفظ الصورة. جرّب مرة أخرى أو استخدم PDF."}
- finally{btn.disabled=false;btn.textContent="🖼️ حفظ التقرير صورة"}
+  a.href=url;a.download="كارت-إنجاز-صفوة-الحفاظ-"+($("studentProfile").querySelector(".student-profile-head h2")?.textContent||"الطالب").replace(/[^\u0600-\u06FF\w-]+/g,"-")+".png";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  status.textContent="تم تجهيز كارت الإنجاز صورة بنجاح.";
+ }catch(e){status.textContent="حصلت مشكلة أثناء حفظ الكارت. جرّب مرة أخرى أو استخدم PDF."}
+ finally{btn.disabled=false;btn.textContent="🖼️ حفظ كارت الإنجاز صورة"}
 }
 async function routeAdmin(user){
   const a=await db.from("admin_profiles").select("username,display_name,is_active,must_change_password").eq("user_id",user.id).maybeSingle();
