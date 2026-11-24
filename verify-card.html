@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f8f7f1">
+<title>التحقق من كارت الإنجاز | صفوة الحفاظ</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:24px;background:#f8f7f1;color:#174b3e;font-family:Cairo,sans-serif;display:grid;place-items:center}
+main{width:min(100%,520px);padding:30px 24px;border:2px solid #e5c46a;border-radius:18px;background:#fff;box-shadow:0 16px 45px #174b3e14;text-align:center}
+.mark{font-size:30px;color:#b99a43}h1{margin:6px 0;color:#075443;font-size:25px}p{line-height:1.9;color:#61746c}
+.result{margin:22px 0;padding:18px;border-radius:12px;background:#f3f6f2}.status{font-size:19px;font-weight:800}.valid{color:#16824f}.invalid{color:#b33b35}.name{font-size:21px;font-weight:800;color:#075443;margin:12px 0 4px}
+.meta{font-size:14px;color:#63756e}.number{margin-top:18px;color:#987c34;font-weight:800;letter-spacing:3px;font-family:Arial,sans-serif}
+footer{margin-top:22px;padding-top:15px;border-top:1px solid #e7dfc8;font-size:13px;color:#987c34}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script>
+</head>
+<body><main>
+<div class="mark">۞</div><h1>صفوة الحفاظ</h1><p>التحقق من اعتماد كارت الإنجاز</p>
+<div id="result" class="result"><p>جاري التحقق من الكارت...</p></div>
+<div id="cardNumber" class="number"></div>
+<footer>بالقرآن نرتقي، وبالإتقان نتميز</footer>
+</main>
+<script>
+(async()=>{
+ const box=document.getElementById("result"),number=document.getElementById("cardNumber");
+ const card=new URLSearchParams(location.search).get("card")||"";
+ number.textContent=card;
+ if(!/^[0-9]{8}$/.test(card)){box.innerHTML='<div class="status invalid">رقم كارت غير صحيح</div><p>تأكد من مسح رمز QR الموجود على الكارت.</p>';return}
+ try{
+  const db=supabase.createClient("https://rjbiahkjfmhexexssczg.supabase.co","sb_publishable_4_pS_PYlIamm6eXOWzGmTg_IY0mN-oR");
+  const {data,error}=await db.rpc("verify_achievement_card",{p_card_number:card});
+  if(error)throw error;
+  if(!data||!data.found){box.innerHTML='<div class="status invalid">الكارت غير مسجل</div><p>لم نعثر على كارت بهذا الرقم في سجلات صفوة الحفاظ.</p>';return}
+  if(data.valid){
+   const student=data.snapshot?.student||{};
+   box.innerHTML='<div class="status valid">✓ كارت معتمد وصالح</div><div class="name">'+String(data.student_name).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div><div class="meta">كارت إنجاز صادر من مركز صفوة الحفاظ</div><div class="meta">تاريخ الإصدار: '+new Date(data.issued_at).toLocaleDateString("ar-EG")+'</div>';
+  }else{
+   box.innerHTML='<div class="status invalid">✕ هذا الكارت ملغي</div><p>تم إلغاء اعتماد هذا الكارت من إدارة المركز.</p><div class="name">'+String(data.student_name).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>';
+  }
+ }catch(e){box.innerHTML='<div class="status invalid">تعذر التحقق حاليًا</div><p>حاول مرة أخرى بعد قليل.</p>'}
+})();
+</script></body></html>
