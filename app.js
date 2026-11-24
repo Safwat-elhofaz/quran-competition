@@ -31,7 +31,7 @@ function level(points){let current=null;for(const item of levels){if(points>=ite
 function localDate(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function monthStart(){return localDate().slice(0,8)+"01"}
 async function currentAdmin(){const r=await db.auth.getUser();if(r.error||!r.data.user)throw Error("انتهت الجلسة، سجل الدخول مرة أخرى.");return r.data.user}
-async function activeMonthly(){const r=await db.from("competitions").select("id,month_start,title,status,created_at").eq("status","active").maybeSingle();if(r.error)throw r.error;return r.data}
+async function activeMonthly(){const r=await db.from("competitions").select("id,month_start,month_end,title,status,created_at").eq("status","active").maybeSingle();if(r.error)throw r.error;return r.data}
 async function activeWeekly(){const r=await db.from("weekly_challenges").select("id,competition_id,week_number,week_start,week_end,title,status,created_at").eq("status","active").maybeSingle();if(r.error)throw r.error;return r.data}
 async function writeAudit(user,action,type,id,details={}){const r=await db.from("admin_audit_logs").insert({admin_user_id:user.id,action,entity_type:type,entity_id:id?String(id):null,details});if(r.error)throw r.error}
 function dateText(value){if(!value)return "—";return new Date(value+"T00:00:00").toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"})}
@@ -61,6 +61,7 @@ async function loadPublicLeaderboards(){
   publicLeaderboardData=data||{overall:[],levels:{}};
   $("overallLeaderboard").innerHTML=leaderboardRows(publicLeaderboardData.overall||[]);
   renderLevelLeaderboard();
+  await loadPublicChallengeArchive();
  }catch(error){
   $("overallLeaderboard").innerHTML='<tr><td colspan="3" class="leaderboard-empty">تعذر تحميل الترتيب حاليًا.</td></tr>';
   $("levelLeaderboard").innerHTML='<tr><td colspan="3" class="leaderboard-empty">تعذر تحميل الترتيب حاليًا.</td></tr>';
@@ -68,6 +69,30 @@ async function loadPublicLeaderboards(){
  }
 }
 $("leaderboardLevelSelect").onchange=renderLevelLeaderboard;
+async function loadPublicChallengeArchive(){
+ const host=$("publicChallengeArchive");if(!host)return;
+ try{
+  const {data,error}=await db.rpc("public_challenge_archive");if(error)throw error;
+  const months=new Map();
+  (data||[]).forEach(x=>{if(!months.has(x.competition_id))months.set(x.competition_id,{title:x.competition_title||"التحدي الشهري",weeks:[],monthly:null});const m=months.get(x.competition_id);if(x.period_type==="monthly")m.monthly=x;else m.weeks.push(x)});
+  if(!months.size){host.innerHTML="<p class='muted-note'>لا توجد تحديات مؤرشفة حتى الآن.</p>";return}
+  host.innerHTML=Array.from(months.values()).map(m=>{
+   const names=["الأول","الثاني","الثالث","الرابع","الخامس"];
+   const weeks=Array.from({length:5},(_,i)=>m.weeks.find(w=>Number(w.week_number)===i+1));
+   const rows=weeks.map((w,i)=>w?"<div class='public-archive-week'><div><b>الأسبوع "+names[i]+"</b><small>"+dateText(w.period_start)+" – "+dateText(w.period_end)+"</small></div><button class='history-btn public-archive-result' data-public-type='weekly' data-public-id='"+w.period_id+"'>أفضل 10</button></div>":"<div class='public-archive-week is-missing'><div><b>الأسبوع "+names[i]+"</b><small>لم يُؤرشف بعد</small></div></div>").join("");
+   const monthly=m.monthly?"<button class='history-btn public-archive-result' data-public-type='monthly' data-public-id='"+m.monthly.period_id+"'>أفضل 10 في الشهر</button>":"<p class='muted-note'>نتيجة الشهر ستظهر بعد انتهاء التحدي الشهري.</p>";
+   return "<details class='public-archive-month'><summary><span>"+esc(m.title)+"</span><small>"+m.weeks.length+" من 5 أسابيع مؤرشفة</small></summary><div class='public-archive-body'><div class='public-archive-weeks'>"+rows+"</div><div class='public-archive-month-result'>"+monthly+"</div><div class='public-archive-results hidden'></div></div></details>";
+  }).join("");
+  host.querySelectorAll(".public-archive-result").forEach(btn=>btn.onclick=async()=>{
+   const box=btn.closest(".public-archive-month").querySelector(".public-archive-results");btn.disabled=true;
+   try{const {data,error}=await db.rpc("public_challenge_top10",{p_period_type:btn.dataset.publicType,p_period_id:btn.dataset.publicId});if(error)throw error;
+    const rows=data||[];box.innerHTML="<h4>"+(btn.dataset.publicType==="monthly"?"أفضل 10 في الشهر":"أفضل 10 في الأسبوع")+"</h4>"+(rows.length?"<div class='table-wrap'><table><thead><tr><th>المركز</th><th>اسم الطالب</th><th>النقاط</th></tr></thead><tbody>"+rows.map(x=>"<tr><td>"+x.rank+"</td><td>"+esc(x.student_name)+"</td><td>"+Number(x.total_points).toLocaleString("en-US")+"</td></tr>").join("")+"</tbody></table></div>":"<p class='muted-note'>لا توجد نتائج مسجلة.</p>");box.classList.remove("hidden");
+   }catch(e){box.innerHTML="<p class='muted-note'>تعذر تحميل النتائج حاليًا.</p>";box.classList.remove("hidden")}
+   finally{btn.disabled=false}
+  });
+ }catch(e){host.innerHTML="<p class='muted-note'>تعذر تحميل أرشيف التحديات حاليًا.</p>"}
+}
+
 
 $("studentOpen").onclick=()=>show("studentView");
 $("adminOpen").onclick=()=>show("adminLoginView");
@@ -491,7 +516,9 @@ $("studentManagementResults").addEventListener("submit",async e=>{
 });
 function weekName(n){return ["","الأول","الثاني","الثالث","الرابع","الخامس"][n]||String(n)}
 function renderPeriodControls(monthly,weekly){
-  $("monthlyStatus").textContent=monthly?"نشط — بدأ في "+dateText(monthly.month_start):"لا يوجد تحدٍ شهري نشط";
+  $("monthlyStatus").textContent=monthly?"نشط — من "+dateText(monthly.month_start)+" إلى "+dateText(monthly.month_end):"لا يوجد تحدٍ شهري نشط";
+  if($("monthlyStartDate"))$("monthlyStartDate").value=monthly?.month_start||"";
+  if($("monthlyEndDate"))$("monthlyEndDate").value=monthly?.month_end||"";
   $("monthlyStartBtn").classList.toggle("hidden",!!monthly);$("monthlyEndBtn").classList.toggle("hidden",!monthly);
   $("weeklyStatus").textContent=weekly?"نشط — الأسبوع "+weekName(weekly.week_number)+" — من "+dateText(weekly.week_start)+" إلى "+(weekly.week_end?dateText(weekly.week_end):"نهاية غير محددة"):"لا يوجد أسبوع نشط حاليًا";
   $("weeklyEndBtn").classList.toggle("hidden",!weekly);
@@ -503,7 +530,7 @@ function renderPeriodControls(monthly,weekly){
 async function loadHistory(monthly){
   const [w,c]=await Promise.all([
     db.from("weekly_challenges").select("id,competition_id,week_number,title,week_start,week_end,status").order("created_at",{ascending:false}).limit(40),
-    db.from("competitions").select("id,title,month_start,status").order("month_start",{ascending:false}).limit(8)
+    db.from("competitions").select("id,title,month_start,month_end,status").order("created_at",{ascending:false}).limit(20)
   ]);
   if(w.error)throw w.error;if(c.error)throw c.error;
   const activeMonthWeeks=(w.data||[]).filter(x=>x.competition_id===monthly?.id);
@@ -519,18 +546,28 @@ async function loadHistory(monthly){
   $("weeklyNumber").disabled=!!active||usedNumbers.size>=5;
   if(usedNumbers.size>=5)$("weeklyStatus").textContent="اكتملت الأسابيع الخمسة لهذا الشهر.";
   $("weeklyHistory").innerHTML=w.data.length?w.data.map(x=>"<tr><td>"+esc(x.title||("الأسبوع "+weekName(x.week_number)))+"</td><td>"+dateText(x.week_start)+" – "+(x.week_end?dateText(x.week_end):"—")+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل أسبوعي</td></tr>';
-  $("monthlyHistory").innerHTML=c.data.length?c.data.map(x=>"<tr><td>"+esc(x.title||"التحدي الشهري")+"</td><td>"+dateText(x.month_start)+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='monthly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
+  $("monthlyHistory").innerHTML=c.data.length?c.data.map(month=>{
+    const weeks=(w.data||[]).filter(x=>x.competition_id===month.id);
+    const slots=Array.from({length:5},(_,i)=>{
+      const n=i+1,x=weeks.find(v=>Number(v.week_number)===n);
+      return "<div class='archive-week-row'><div><b>الأسبوع "+weekName(n)+"</b><small>"+(x?dateText(x.week_start)+" – "+dateText(x.week_end):"لم يبدأ بعد")+"</small></div><span>"+(x?(x.status==="active"?"نشط":"مكتمل"):"غير متاح")+"</span>"+(x?"<button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button>":"")+"</div>";
+    }).join("");
+    return "<tr><td>"+esc(month.title||"التحدي الشهري")+"</td><td>"+dateText(month.month_start)+" – "+dateText(month.month_end)+"</td><td>"+(month.status==="active"?"نشط":"منتهي")+"</td><td><details class='admin-month-archive'><summary>الأسابيع الخمسة</summary>"+slots+"</details>"+(month.status==="archived"?"<button class='history-btn' data-history-type='monthly' data-history-id='"+month.id+"'>نتائج الشهر</button>":"")+"</td></tr>";
+  }).join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
 }
 $("weeklyHistory").onclick=handleHistoryClick;$("weeklyProgress").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
 async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
 async function showPeriodResults(type,id){
   try{
     const monthly=type==="monthly",column=monthly?"competition_id":"weekly_challenge_id",view=monthly?"student_monthly_totals":"student_weekly_totals";
-    const r=await db.from(view).select("student_id,full_name,total_points").eq(column,id);if(r.error)throw r.error;
-    const rows=(r.data||[]).sort((a,b)=>b.total_points-a.total_points||a.full_name.localeCompare(b.full_name,"ar"));
+    const archived=await db.from("challenge_result_snapshots").select("student_id,student_name,total_points,rank").eq("period_type",type).eq("period_id",id).order("rank",{ascending:true});
+    if(archived.error)throw archived.error;
+    let rows=(archived.data||[]).map(x=>({student_id:x.student_id,full_name:x.student_name,total_points:x.total_points,rank:x.rank}));
+    if(!rows.length){const live=await db.from(view).select("student_id,full_name,total_points").eq(column,id);if(live.error)throw live.error;rows=(live.data||[]).sort((a,b)=>b.total_points-a.total_points||a.full_name.localeCompare(b.full_name,"ar"));}
+    else rows.sort((a,b)=>a.rank-b.rank||a.full_name.localeCompare(b.full_name,"ar"));
     $("challengeResultsTitle").textContent=monthly?"نتائج التحدي الشهري":"نتائج التحدي الأسبوعي";
     let lastPoints=null,lastRank=0;
-    $("challengeResultsTable").innerHTML=rows.length?rows.map((x,i)=>{if(i===0||x.total_points!==lastPoints)lastRank=i+1;lastPoints=x.total_points;return "<tr><td>"+lastRank+"</td><td>"+esc(x.full_name)+"</td><td>"+x.total_points+"</td></tr>"}).join(""):'<tr><td colspan="3">لا توجد نقاط مسجلة لهذا التحدي</td></tr>';
+    $("challengeResultsTable").innerHTML=rows.length?rows.map((x,i)=>{if(x.rank)lastRank=x.rank;else if(i===0||x.total_points!==lastPoints)lastRank=i+1;lastPoints=x.total_points;return "<tr><td>"+lastRank+"</td><td>"+esc(x.full_name)+"</td><td>"+x.total_points+"</td></tr>"}).join(""):'<tr><td colspan="3">لا توجد نقاط مسجلة لهذا التحدي</td></tr>';
     $("challengeResultsPanel").classList.remove("hidden");$("challengeResultsPanel").scrollIntoView({behavior:"smooth",block:"start"})
   }catch(e){msg("pointsMessage","تعذر عرض النتائج: "+e.message,true)}
 }
@@ -557,13 +594,28 @@ $("weeklyEndBtn").onclick=async()=>{
 };
 $("monthlyStartBtn").onclick=async()=>{
   try{const user=await currentAdmin(),active=await activeMonthly();if(active){msg("pointsMessage","يوجد تحدٍ شهري نشط بالفعل.",true);return}
-    const start=monthStart(),existing=await db.from("competitions").select("id,status").eq("month_start",start).maybeSingle();if(existing.error)throw existing.error;if(existing.data)throw Error("تحدي الشهر الحالي موجود ومغلق بالفعل؛ لا يمكن إعادة فتحه.");
-    const r=await db.from("competitions").insert({month_start:start,title:"التحدي الشهري",status:"active"}).select("id").single();if(r.error)throw r.error;
-    await writeAudit(user,"start","monthly_challenge",r.data.id,{month_start:start});msg("pointsMessage","بدأ التحدي الشهري بنجاح.");await loadDashboard()
+    const start=$("monthlyStartDate").value,end=$("monthlyEndDate").value;
+    if(!start||!end||end<start)throw Error("حدد تاريخ بداية ونهاية صحيحين للتحدي الشهري.");
+    const r=await db.rpc("admin_start_monthly_challenge",{p_month_start:start,p_month_end:end});if(r.error)throw r.error;
+    const created=Array.isArray(r.data)?r.data[0]:r.data;
+    await writeAudit(user,"start","monthly_challenge",created.id,{month_start:start,month_end:end});msg("pointsMessage","بدأ التحدي الشهري بنجاح.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر بدء التحدي الشهري: "+e.message,true)}
+};
+$("monthlySaveDatesBtn").onclick=async()=>{
+  try{
+    const user=await currentAdmin(),active=await activeMonthly();
+    if(!active)throw Error("ابدأ التحدي الشهري أولًا.");
+    const end=$("monthlyEndDate").value;
+    if(!end||end<active.month_start)throw Error("تاريخ النهاية يجب أن يكون بعد تاريخ البداية.");
+    const r=await db.rpc("admin_set_monthly_end_date",{p_competition_id:active.id,p_month_end:end});if(r.error)throw r.error;
+    await writeAudit(user,"update","monthly_challenge",active.id,{month_start:active.month_start,month_end:end});
+    msg("pointsMessage","تم حفظ تاريخ نهاية التحدي الشهري.");await loadDashboard();
+  }catch(e){msg("pointsMessage","تعذر حفظ تاريخ النهاية: "+e.message,true)}
 };
 $("monthlyEndBtn").onclick=async()=>{
   try{const user=await currentAdmin(),active=await activeMonthly();if(!active)throw Error("لا يوجد تحدٍ شهري نشط.");
+    if(await activeWeekly())throw Error("أنهِي الأسبوع النشط أولًا قبل إنهاء التحدي الشهري.");
+    if(!active.month_end)throw Error("حدد تاريخ نهاية التحدي الشهري واحفظه أولًا.");
     const r=await db.from("competitions").update({status:"archived",archived_at:new Date().toISOString(),ended_by:user.id}).eq("id",active.id);if(r.error)throw r.error;
     await writeAudit(user,"end","monthly_challenge",active.id,{month_start:active.month_start});msg("pointsMessage","انتهى التحدي الشهري وحُفظت نتائجه.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الشهري: "+e.message,true)}
