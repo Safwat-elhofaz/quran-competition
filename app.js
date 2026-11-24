@@ -173,8 +173,9 @@ async function createAchievementExportStage(){
  if(!window.QRCode)throw Error("تعذر تحميل مولّد رمز QR. حدّث الصفحة وحاول مرة أخرى.");
  const studentCode=currentAchievementData?.student?.student_code;
  if(!studentCode)throw Error("كود الطالب غير متاح لإنشاء كارت الإنجاز.");
- const {data:cardData,error:cardError}=await db.rpc("get_or_create_achievement_card",{p_student_code:String(studentCode)});
+ const {data:cardRows,error:cardError}=await db.rpc("get_or_create_achievement_card",{p_student_code:String(studentCode)});
  if(cardError)throw cardError;
+ const cardData=Array.isArray(cardRows)?cardRows[0]:cardRows;
  if(!cardData?.card_number)throw Error("تعذر إنشاء رقم كارت الإنجاز.");
  const qrBox=document.createElement("div");
  qrBox.className="achievement-card-qr";
