@@ -88,7 +88,7 @@ $("studentForm").onsubmit=async e=>{
 };
 function renderAchievementCard(data){
  const s=data.student,performance=data.performance||{},total=Number(s.total_points)||0;
- const history=Array.isArray(performance.weekly_history)?performance.weekly_history:[];
+ const history=Array.isArray(performance.weekly_history)?performance.weekly_history.filter(w=>!w.week_start||String(w.week_start).slice(0,10)<=localDate()):[];
  const groupAssigned=!!s.group_level;
  const groupAverageRaw=performance.group_average;
  const groupAverage=groupAverageRaw==null?null:Number(groupAverageRaw);
