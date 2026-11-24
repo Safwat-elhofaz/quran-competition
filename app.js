@@ -409,11 +409,11 @@ async function setAchievementCardAdminStatus(number,action,reason){
  const buttons=$("achievementCardAdminResult").querySelectorAll("button");buttons.forEach(b=>b.disabled=true);
  try{
   const {data,error}=await db.rpc("admin_set_achievement_card_status",{p_card_number:number,p_action:action,p_reason:reason||null});if(error)throw error;
-  msg("achievementCardAdminMessage",action==="revoke"?"تم إلغاء اعتماد الكارت. عند مسح QR ستظهر حالة الإلغاء.":"تمت إعادة اعتماد الكارت بنجاح.");
   await searchAchievementCardAdmin();
   const admins=await db.from("admin_profiles").select("user_id,display_name").eq("is_active",true);
   if(admins.error)throw admins.error;
   await loadAchievementCardAdminHistory(admins.data||[]);
+  msg("achievementCardAdminMessage",action==="revoke"?"تم إلغاء اعتماد الكارت. عند مسح QR ستظهر حالة الإلغاء.":"تمت إعادة اعتماد الكارت بنجاح.");
  }catch(e){msg("achievementCardAdminMessage","تعذر تنفيذ العملية: "+e.message,true);buttons.forEach(b=>b.disabled=false)}
 }
 $("achievementCardAdminForm").onsubmit=async e=>{e.preventDefault();await searchAchievementCardAdmin()};
