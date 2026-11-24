@@ -348,6 +348,8 @@ $("changePasswordForm").onsubmit=async e=>{
 };
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();pendingAdmin=null;show("homeView")};
 $("adminHomeBtn").onclick=()=>show("homeView");
+$("studentsCountButton").onclick=()=>{const list=$("allStudentsAccordion"),button=$("studentsCountButton");list.open=!list.open;button.setAttribute("aria-expanded",String(list.open));if(list.open)list.scrollIntoView({behavior:"smooth",block:"start"});};
+$("allStudentsAccordion").addEventListener("toggle",()=> $("studentsCountButton").setAttribute("aria-expanded",String($("allStudentsAccordion").open)));
 async function loadDashboard(){
   try{
     const [s,a,c,w,t,adminProfiles]=await Promise.all([
