@@ -268,9 +268,8 @@ function renderStudentProfile(data){
    <section class="student-progress-card student-performance-card"><h3>أداؤك أسبوعًا بعد أسبوع</h3><p class="student-chart-note">مقارنة نقاطك بمتوسط نقاط مجموعتك في كل أسبوع من المسابقة</p>${weeklyChartHtml}</section>
    <section class="student-progress-card student-group-performance"><h3>معدلات أدائك في مجموعتك</h3><div class="student-group-kpis"><div><strong>${Number(performance.group_rank)||"—"}</strong><span>ترتيبك في المجموعة</span></div><div><strong>${Number(performance.group_size)||0}</strong><span>عدد طلاب المجموعة</span></div><div><strong>${Number(performance.group_average)||0}</strong><span>متوسط نقاط المجموعة</span></div></div><div class="student-compare-row"><span>نقاطك</span><div class="student-compare-track"><i style="width:${groupOwnWidth}%"></i></div><b>${total}</b></div><div class="student-compare-row average"><span>المتوسط</span><div class="student-compare-track"><i style="width:${groupAverageWidth}%"></i></div><b>${Number(performance.group_average)||0}</b></div><p class="student-chart-note">${total>Number(performance.group_average||0)?"أنت أعلى من متوسط مجموعتك بـ "+(total-Number(performance.group_average||0))+" نقطة.":total<Number(performance.group_average||0)?"متبقي لك "+(Number(performance.group_average||0)-total)+" نقطة لتصل إلى متوسط مجموعتك.":"أنت عند متوسط مجموعتك تمامًا."}</p></section>
    <section class="student-progress-card student-nearby-card"><h3>الطالبان المجاوران لترتيبك</h3><p class="student-chart-note">اسم الطالب السابق والطالب التالي لك مباشرة في ترتيب المجموعة</p>${neighborHtml}</section>
-   <section class="student-progress-card student-rankings"><h3>ترتيبك بين زملائك في المجموعة المستهدفة</h3><div class="student-ranking-grid">
+   <section class="student-progress-card student-rankings"><h3>الترتيب العام للطلاب</h3><div class="student-ranking-grid">
     <div><h4>أفضل الطلاب إجمالًا</h4><ol id="studentOverallTop"><li>جاري تحميل الترتيب...</li></ol></div>
-    <div><h4>أفضل الطلاب في مجموعتك المستهدفة</h4><ol id="studentLevelTop"><li>جاري تحميل الترتيب...</li></ol></div>
    </div></section>
    <div class="student-report-footer"><span>أثرٌ يبقى</span><i>۞</i><span>نورٌ لا ينطفئ</span><small>هذا التقرير يعرض بيانات الطالب وقت الاستعلام</small></div>
   </div>
@@ -284,10 +283,10 @@ function renderStudentProfile(data){
 async function loadStudentReportRankings(student){
  try{
   const {data,error}=await db.rpc("public_leaderboards");if(error)throw error;
-  const overall=(data?.overall||[]).slice(0,10),byLevel=(data?.groups?.[student.group_level]||[]).slice(0,10);
+  const overall=(data?.overall||[]).slice(0,10);
   const render=rows=>{let previousPoints=null,currentRank=0;return rows.length?rows.map((x,i)=>{const points=Number(x.points)||0,repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<li class="'+(x.name===student.full_name?'is-me':'')+'"><span>'+rankLabel(currentRank,repeated)+'</span><b>'+esc(x.name)+(x.name===student.full_name?' (أنت)':'')+'</b><strong>'+points.toLocaleString("en-US")+'</strong></li>'}).join(""):'<li>لا توجد بيانات متاحة حاليًا.</li>'};
-  $("studentOverallTop").innerHTML=render(overall);$("studentLevelTop").innerHTML=render(byLevel);
- }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";$("studentLevelTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
+  $("studentOverallTop").innerHTML=render(overall);
+ }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
 }
 async function saveStudentReportImage(){
  const btn=$("studentImageBtn"),status=$("studentExportMessage");
