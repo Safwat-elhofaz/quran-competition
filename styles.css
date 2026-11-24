@@ -604,3 +604,13 @@ button:disabled{opacity:.6;cursor:wait}
 .achievement-summary{padding:6px 8px!important}.achievement-summary ol{gap:1px!important}.achievement-summary li{grid-template-columns:14px minmax(0,1fr)!important;gap:4px!important;padding:1px 0!important}.achievement-summary li>span{width:13px!important;height:13px!important;font-size:7px!important}.achievement-summary li p{font-size:8px!important;line-height:1.35!important}
 .achievement-card-footer{padding-top:3px!important;font-size:10px!important}
 @media(max-width:520px){.achievement-card{padding:9px 12px!important;gap:4px!important}.achievement-chart{max-height:62px!important}.achievement-summary li p{font-size:7.5px!important}}
+
+/* Export-only achievement card: never shown in the student page */
+.achievement-export-stage{pointer-events:none!important}
+@media print{
+ @page{size:108mm 192mm;margin:0}
+ body.printing-achievement-card>*{visibility:hidden!important}
+ body.printing-achievement-card .achievement-export-stage,
+ body.printing-achievement-card .achievement-export-stage *{visibility:visible!important}
+ body.printing-achievement-card .achievement-export-stage{position:static!important;left:auto!important;top:auto!important}
+}
