@@ -519,7 +519,7 @@ function renderPeriodControls(monthly,weekly){
   $("monthlyStatus").textContent=monthly?"نشط — من "+dateText(monthly.month_start)+" إلى "+dateText(monthly.month_end):"لا يوجد تحدٍ شهري نشط";
   if($("monthlyStartDate"))$("monthlyStartDate").value=monthly?.month_start||"";
   if($("monthlyEndDate"))$("monthlyEndDate").value=monthly?.month_end||"";
-  $("monthlyStartBtn").classList.toggle("hidden",!!monthly);$("monthlyEndBtn").classList.toggle("hidden",!monthly);
+  $("monthlyStartBtn").classList.toggle("hidden",!!monthly);$("monthlyEndBtn").classList.toggle("hidden",!monthly);$("monthlySaveDatesBtn").classList.toggle("hidden",!monthly);
   $("weeklyStatus").textContent=weekly?"نشط — الأسبوع "+weekName(weekly.week_number)+" — من "+dateText(weekly.week_start)+" إلى "+(weekly.week_end?dateText(weekly.week_end):"نهاية غير محددة"):"لا يوجد أسبوع نشط حاليًا";
   $("weeklyEndBtn").classList.toggle("hidden",!weekly);
   $("weeklyStartBtn").classList.toggle("hidden",!!weekly||!monthly);
