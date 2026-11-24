@@ -123,7 +123,7 @@ function renderAchievementCard(data){
  <section class="achievement-goal"><div class="achievement-goal-head"><b>هدفك القادم</b><strong>__TARGET__</strong></div><div class="achievement-goal-progress"><i style="width:__PERCENT__%"></i></div><div class="achievement-goal-foot"><span>نسبة التقدم __PERCENT__%</span><span>__REMAIN__</span></div></section>
  <section class="achievement-journey"><h3>رحلة تقدمك</h3>__GRAPH__<div class="achievement-chart-legend"><span><i></i> نقاطك</span><span><i></i> متوسط مجموعتك</span></div></section>
  <section class="achievement-summary"><h3>إنجازك في سطور</h3><ol>__SUMMARY__</ol></section>
- <footer class="achievement-card-footer">بالقرآن نرتقي، وبالإتقان نتميز</footer></article></section>`
+ <footer class="achievement-card-footer">بالقرآن نرتقي، وبالإتقان نتميز<br>إدارة خادم القرآن : وليد باشا</footer></article></section>`
  .replace("__NAME__",esc(s.full_name)).replace("__GROUP__",esc(s.group_level||"غير محددة"))
  .replace("__TOTAL__",total.toLocaleString("en-US")).replace("__LEVEL__",esc(s.level||"بدون مستوى"))
  .replace("__GRANK__",groupRank||"—").replace("__GSIZE__",groupSize||"—")
