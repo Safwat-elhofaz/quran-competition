@@ -89,23 +89,24 @@ $("studentForm").onsubmit=async e=>{
 function renderAchievementCard(data){
  const s=data.student,performance=data.performance||{},total=Number(s.total_points)||0;
  const history=Array.isArray(performance.weekly_history)?performance.weekly_history:[];
- const groupAverage=Number(performance.group_average)||0;
+ const groupAssigned=!!s.group_level;
+ const groupAverageRaw=performance.group_average;
+ const groupAverage=groupAverageRaw==null?null:Number(groupAverageRaw);
+ const groupSize=groupAssigned?Number(performance.group_size)||0:0;
+ const groupRank=groupAssigned?Number(performance.group_rank)||0:0;
  const targetPoints=targetGroupThreshold(s.group_level);
  const targetPercent=targetPoints?Math.min(100,Math.round(total/targetPoints*100)):null;
- const groupStudents=Array.isArray(performance.group_students)?[...performance.group_students]:[];
- groupStudents.sort((a,b)=>Number(b.points)-Number(a.points));
- const leader=groupStudents[0]||null;
- const gap=leader?Math.max(0,Number(leader.points)-total):null;
- const rank=Number(s.overall_rank)||0,size=Number(s.overall_size)||0;
- const topPercent=rank&&size?Math.min(100,Math.round(rank/size*100)):null;
- const avgDiff=groupAverage?Math.round((total-groupAverage)/groupAverage*100):null;
- const avgLine=!groupAverage?"لا تتوفر بيانات كافية لمتوسط المجموعة.":total>=groupAverage?"أعلى من متوسط المجموعة بـ "+(total-groupAverage)+" نقطة ("+Math.abs(avgDiff)+"%).":"أقل من متوسط المجموعة بـ "+(groupAverage-total)+" نقطة ("+Math.abs(avgDiff)+"%).";
- const goalLine=targetPoints?(total>=targetPoints?"حققت هدف المجموعة ("+targetPoints+" نقطة).":"باقي "+(targetPoints-total)+" نقطة لتحقيق هدف المجموعة."):"لم تُحدد مجموعة مستهدفة لهذا الطالب.";
+ const groupTopRaw=performance.group_top_points;
+ const groupTopPoints=groupTopRaw==null?null:Number(groupTopRaw);
+ const gap=groupAssigned&&groupTopPoints!==null?Math.max(0,groupTopPoints-total):null;
+ const groupTopPercent=groupRank&&groupSize?Math.min(100,Math.max(1,Math.ceil(groupRank/groupSize*100))):null;
+ const avgLine=!groupAssigned?"لم تُحدد للطالب مجموعة مستهدفة للمقارنة.":groupAverage===null||!groupSize?"لا تتوفر بيانات كافية لحساب متوسط المجموعة.":total===groupAverage?"نقاطك تساوي متوسط المجموعة ("+groupAverage.toLocaleString("en-US")+" نقطة).":total>groupAverage?"أعلى من متوسط المجموعة بـ "+(total-groupAverage).toLocaleString("en-US")+" نقطة (متوسط المجموعة "+groupAverage.toLocaleString("en-US")+").":"أقل من متوسط المجموعة بـ "+(groupAverage-total).toLocaleString("en-US")+" نقطة (متوسط المجموعة "+groupAverage.toLocaleString("en-US")+").";
+ const goalLine=targetPoints?(total>=targetPoints?"حققت هدف مجموعتك المستهدفة ("+targetPoints.toLocaleString("en-US")+" نقطة).":"باقي لك "+(targetPoints-total).toLocaleString("en-US")+" نقطة للوصول إلى مجموعتك المستهدفة."):"لم تُحدد مجموعة مستهدفة لهذا الطالب.";
  const trend=history.length>1?(Number(history[history.length-1].points)||0)-(Number(history[history.length-2].points)||0):null;
- const trendLine=trend===null?"لم تكتمل بيانات المقارنة الأسبوعية بعد.":trend>0?"تقدم هذا الأسبوع بـ "+trend+" نقطة عن السابق.":trend<0?"انخفض رصيدك بـ "+Math.abs(trend)+" نقطة عن السابق.":"حافظت على نفس رصيد الأسبوع السابق.";
- const rankLine=topPercent===null?"ترتيبك النسبي غير متاح حاليًا.":"ضمن أعلى "+topPercent+"% من المركز.";
- const weeklyLine=history.length?"نقاطك أسبوعيًا: "+history.map(w=>"أ"+Number(w.week_number)+": "+(Number(w.points)||0)).join(" · "):"النقاط الأسبوعية: لا توجد بيانات مسجلة.";
- const leaderLine=gap===null?"الفارق عن الأول غير متاح حاليًا.":gap===0?"أنت صاحب المركز الأول في مجموعتك.":"يفصلك عن صاحب المركز الأول "+gap+" نقطة.";
+ const trendLine=trend===null?"لا توجد بيانات أسبوعين مكتملين للمقارنة بعد.":trend>0?"زاد رصيدك في آخر أسبوع مسجل بـ "+trend.toLocaleString("en-US")+" نقطة عن الأسبوع السابق.":trend<0?"قل رصيدك في آخر أسبوع مسجل بـ "+Math.abs(trend).toLocaleString("en-US")+" نقطة عن الأسبوع السابق.":"رصيدك في آخر أسبوع مسجل يساوي الأسبوع السابق.";
+ const rankLine=!groupAssigned?"لا يمكن حساب ترتيب نسبي دون مجموعة مستهدفة.":groupTopPercent===null?"ترتيبك النسبي داخل المجموعة غير متاح حاليًا.":"ضمن أفضل "+groupTopPercent+"% من المجموعة المستهدفة (ترتيب "+groupRank+" من "+groupSize+").";
+ const weeklyLine=history.length?"نقاطك المسجلة أسبوعيًا: "+history.map(w=>"الأسبوع "+Number(w.week_number)+": "+(Number(w.points)||0).toLocaleString("en-US")+" نقطة").join(" · "):"لا توجد نقاط أسبوعية مسجلة في المسابقة الحالية.";
+ const leaderLine=!groupAssigned?"لا يمكن تحديد الفارق عن الأول دون مجموعة مستهدفة.":gap===null?"الفارق عن صاحب المركز الأول غير متاح حاليًا.":gap===0?"أنت في صدارة مجموعتك المستهدفة"+(groupRank>1?" بالتساوي مع طالب آخر.":"."):"يفصلك عن صاحب المركز الأول في مجموعتك "+gap.toLocaleString("en-US")+" نقطة.";
  const lines=[goalLine,avgLine,trendLine,rankLine,weeklyLine,leaderLine];
  const max=Math.max(1,...history.flatMap(w=>[Number(w.points)||0,Number(w.group_average)||0]));
  const w=620,h=155,px=26,py=17;
@@ -114,7 +115,6 @@ function renderAchievementCard(data){
  const own=coords("points"),avg=coords("group_average");
  const graph=history.length?'<svg class="achievement-chart" viewBox="0 0 620 155" role="img" aria-label="تطور نقاط الطالب ومتوسط المجموعة"><line x1="20" y1="135" x2="600" y2="135"/><line x1="20" y1="77" x2="600" y2="77"/><line x1="20" y1="19" x2="600" y2="19"/><path class="achievement-average-line" d="'+path(avg)+'"/><path class="achievement-own-line" d="'+path(own)+'"/>'+own.map(p=>'<circle class="achievement-own-dot" cx="'+p.x+'" cy="'+p.y+'" r="5"/>').join("")+'<text x="25" y="151">البداية</text><text x="595" y="151" text-anchor="end">الآن</text></svg>':'<div class="achievement-chart-empty">لا توجد بيانات أسبوعية كافية لرسم التطور بعد</div>';
  const summary=lines.map((v,i)=>'<li><span>'+(i+1)+'</span><p>'+esc(v)+'</p></li>').join("");
- const groupRank=Number(performance.group_rank)||0,groupSize=Number(performance.group_size)||0;
  return `<section class="achievement-preview-wrap"><div class="achievement-preview-heading"><b>كارت الإنجاز الجاهز للمشاركة</b><small>مقاس رأسي مناسب للستوري 9:16</small></div><article class="achievement-card" id="studentAchievementCard" dir="rtl">
  <header class="achievement-card-header"><span class="achievement-mark">۞</span><div><b>مركز صفوة الحفاظ</b><small>مسابقة النقاط · بطاقة إنجاز الطالب</small></div><span class="achievement-mark">۞</span></header>
  <div class="achievement-student-name"><h2>__NAME__</h2><span>المجموعة المستهدفة: __GROUP__</span></div>
@@ -127,10 +127,10 @@ function renderAchievementCard(data){
  .replace("__NAME__",esc(s.full_name)).replace("__GROUP__",esc(s.group_level||"غير محددة"))
  .replace("__TOTAL__",total.toLocaleString("en-US")).replace("__LEVEL__",esc(s.level||"بدون مستوى"))
  .replace("__GRANK__",groupRank||"—").replace("__GSIZE__",groupSize||"—")
- .replace("__RANK__",rank||"—").replace("__SIZE__",size||"—")
- .replace("__TARGET__",targetPoints?targetPoints+" نقطة":"غير محدد")
+ .replace("__RANK__",Number(s.overall_rank)||"—").replace("__SIZE__",Number(s.overall_size)||"—")
+ .replace("__TARGET__",targetPoints?targetPoints.toLocaleString("en-US")+" نقطة":"غير محدد")
  .replaceAll("__PERCENT__",targetPercent===null?"0":String(targetPercent))
- .replace("__REMAIN__",targetPoints?(total>=targetPoints?"تم تحقيق الهدف":"باقي "+(targetPoints-total)+" نقطة"):"لا يوجد هدف محدد")
+ .replace("__REMAIN__",targetPoints?(total>=targetPoints?"تم تحقيق الهدف":"باقي "+(targetPoints-total).toLocaleString("en-US")+" نقطة"):"لا يوجد هدف محدد")
  .replace("__GRAPH__",graph).replace("__SUMMARY__",summary);
 }
 function createAchievementExportStage(){
