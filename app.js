@@ -515,7 +515,7 @@ function renderAllStudentsRanking(){
  const studentsById=new Map(dashboardStudents.map(s=>[s.id,s]));
  const rows=dashboardRanked.map(x=>({...x,student:studentsById.get(x.student_id)})).filter(x=>x.student);
  let previousPoints=null,currentRank=0;
- body.innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points||0),repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<tr><td class="all-students-rank">'+rankLabel(currentRank,repeated)+'</td><td class="all-students-name">'+esc(x.full_name||x.student.full_name)+'</td><td class="all-students-points">'+points.toLocaleString("en-US")+'</td><td><span class="all-students-group">'+esc(x.student.group_level||"غير محددة")+'</span></td></tr>'}).join(""):'<tr><td colspan="4" class="muted-note">لا يوجد طلاب مسجلون حتى الآن.</td></tr>';
+ body.innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points||0),repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<tr><td class="all-students-rank">'+rankLabel(currentRank,repeated)+'</td><td class="all-students-name">'+esc(x.full_name||x.student.full_name)+'</td><td class="all-students-points">'+points.toLocaleString("en-US")+'</td><td><span class="all-students-group">'+esc(x.student.group_level||"غير محددة")+'</span></td><td class="all-students-code">'+esc(x.student_code||x.student.student_code||"—")+'</td><td class="all-students-level">'+esc(level(points))+'</td></tr>'}).join(""):'<tr><td colspan="6" class="muted-note">لا يوجد طلاب مسجلون حتى الآن.</td></tr>';
 }
 function renderStudentAddForm(query){
  const normalized=normalizeStudentName(query||"");
