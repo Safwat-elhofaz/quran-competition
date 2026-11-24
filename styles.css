@@ -543,3 +543,18 @@ button:disabled{opacity:.6;cursor:wait}
 .student-target-status.is-reached{background:rgba(22,128,100,.12);color:#168064}
 .dark .student-target-status.is-progress{color:#e7c36e}
 .dark .student-target-status.is-reached{color:#7bd0b0}
+
+/* Student report: percentages and immediate rank neighbors */
+.student-percentage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.student-percentage-grid article{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:13px 8px;border:1px solid rgba(24,91,70,.14);border-radius:14px;background:rgba(232,243,235,.62);text-align:center}
+.student-percentage-grid strong{font-size:clamp(18px,4vw,25px);color:var(--green,#145b46);font-weight:900}
+.student-percentage-grid span{font-size:11px;line-height:1.6;color:var(--muted,#718078)}
+.student-nearby-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.student-nearby-pair article{display:flex;flex-direction:column;gap:7px;padding:15px;border:1px solid rgba(24,91,70,.15);border-radius:14px;background:rgba(232,243,235,.55);min-width:0}
+.student-nearby-pair article small{color:var(--muted,#718078);font-weight:700}
+.student-nearby-pair article b{font-size:15px;overflow-wrap:anywhere;color:var(--green,#145b46)}
+.student-nearby-pair article span{font-size:12px;color:var(--muted,#718078)}
+.student-nearby-pair article.is-empty{opacity:.72}
+@media(max-width:520px){.student-percentage-grid{gap:6px}.student-percentage-grid article{padding:10px 5px}.student-percentage-grid span{font-size:10px}.student-nearby-pair{gap:8px}.student-nearby-pair article{padding:11px 9px}.student-nearby-pair article b{font-size:13px}}
+.dark .student-percentage-grid article,.dark .student-nearby-pair article{background:rgba(35,67,54,.5);border-color:rgba(225,194,113,.18)}
+.dark .student-percentage-grid strong,.dark .student-nearby-pair article b{color:#d8c17c}
