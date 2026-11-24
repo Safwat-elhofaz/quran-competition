@@ -462,26 +462,33 @@ $("studentManagementResults").onclick=async e=>{
  try{button.disabled=true;button.textContent="جاري التنفيذ...";const r=await db.rpc("admin_adjust_student_points",{p_student_id:id,p_mode:mode,p_points:value,p_reason:set?"تعديل إجمالي من لوحة الطلاب":"إضافة نقاط من لوحة الطلاب"});if(r.error)throw r.error;const result=Array.isArray(r.data)?r.data[0]:r.data;if(!result)throw Error("لم تصل نتيجة التعديل من قاعدة البيانات.");msg("studentManagementMessage",result.points_delta===0?"إجمالي الطالب بالفعل يساوي الرقم المطلوب.":"تم التعديل بنجاح. الإجمالي: "+result.previous_total+" ← "+result.new_total+" نقطة.");await loadDashboard()}
  catch(err){button.disabled=false;button.textContent=set?"تعديل الإجمالي":"إضافة نقاط";msg("studentManagementMessage","تعذر تعديل النقاط: "+err.message,true)}
 };
-$("cancelStudentEdit").onclick=()=>{$("editStudentForm").classList.add("hidden");$("editStudentForm").reset()};
-$("cancelStudentGroupEdit").onclick=()=>{$("editStudentGroupForm").classList.add("hidden");$("editStudentGroupForm").reset()};
-$("editStudentGroupForm").onsubmit=async e=>{
- e.preventDefault();const id=$("editStudentGroupId").value,x=dashboardStudents.find(v=>v.id===id),group=$("editStudentGroup").value;
- if(!x||!group){msg("studentManagementMessage","اختر مجموعة صحيحة للطالب.",true);return}
- if(group===x.group_level){msg("studentManagementMessage","الطالب بالفعل ضمن هذه المجموعة.");$("editStudentGroupForm").classList.add("hidden");return}
- const save=$("editStudentGroupForm").querySelector("button.primary");
- try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:x.full_name,p_group_level:group});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:x.full_name,old_group:x.group_level,new_group:group});$("editStudentGroupForm").classList.add("hidden");$("editStudentGroupForm").reset();msg("studentManagementMessage","تم تحديث المجموعة المستهدفة للطالب "+x.full_name+" إلى "+group+".");await loadDashboard()}
- catch(err){msg("studentManagementMessage","تعذر تعديل المجموعة: "+err.message,true)}
- finally{save.disabled=false;save.textContent="حفظ المجموعة"}
-};
-$("editStudentForm").onsubmit=async e=>{
- e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim();
- if(!x||!name){msg("studentManagementMessage","اكتب اسمًا صحيحًا للطالب.",true);return}
- if(dashboardStudents.some(v=>v.id!==id&&normalizeStudentName(v.full_name)===normalizeStudentName(name))){msg("studentManagementMessage","يوجد طالب آخر مسجل بنفس الاسم.",true);return}
- const save=$("editStudentForm").querySelector("button.primary");
- try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:x.group_level});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:x.group_level});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث اسم الطالب بنجاح.");await loadDashboard()}
- catch(err){msg("studentManagementMessage","تعذر تعديل الاسم: "+err.message,true)}
- finally{save.disabled=false;save.textContent="حفظ الاسم"}
-};
+$("studentManagementResults").addEventListener("click",e=>{
+ const cancelName=e.target.closest("#cancelStudentEdit");
+ if(cancelName){$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();return}
+ const cancelGroup=e.target.closest("#cancelStudentGroupEdit");
+ if(cancelGroup){$("editStudentGroupForm").classList.add("hidden");$("editStudentGroupForm").reset();return}
+});
+$("studentManagementResults").addEventListener("submit",async e=>{
+ if(e.target.id==="editStudentGroupForm"){
+  e.preventDefault();const id=$("editStudentGroupId").value,x=dashboardStudents.find(v=>v.id===id),group=$("editStudentGroup").value;
+  if(!x||!group){msg("studentManagementMessage","اختر مجموعة صحيحة للطالب.",true);return}
+  if(group===x.group_level){msg("studentManagementMessage","الطالب بالفعل ضمن هذه المجموعة.");$("editStudentGroupForm").classList.add("hidden");return}
+  const save=$("editStudentGroupForm").querySelector("button.primary");
+  try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:x.full_name,p_group_level:group});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:x.full_name,old_group:x.group_level,new_group:group});$("editStudentGroupForm").classList.add("hidden");$("editStudentGroupForm").reset();msg("studentManagementMessage","تم تحديث المجموعة المستهدفة للطالب "+x.full_name+" إلى "+group+".");await loadDashboard()}
+  catch(err){msg("studentManagementMessage","تعذر تعديل المجموعة: "+err.message,true)}
+  finally{save.disabled=false;save.textContent="حفظ المجموعة"}
+  return;
+ }
+ if(e.target.id==="editStudentForm"){
+  e.preventDefault();const id=$("editStudentId").value,x=dashboardStudents.find(v=>v.id===id),name=$("editStudentName").value.trim();
+  if(!x||!name){msg("studentManagementMessage","اكتب اسمًا صحيحًا للطالب.",true);return}
+  if(dashboardStudents.some(v=>v.id!==id&&normalizeStudentName(v.full_name)===normalizeStudentName(name))){msg("studentManagementMessage","يوجد طالب آخر مسجل بنفس الاسم.",true);return}
+  const save=$("editStudentForm").querySelector("button.primary");
+  try{save.disabled=true;save.textContent="جاري الحفظ...";const r=await db.rpc("admin_update_student_profile",{p_student_id:id,p_full_name:name,p_group_level:x.group_level});if(r.error)throw r.error;const user=await currentAdmin();await writeAudit(user,"update","student",id,{old_name:x.full_name,new_name:name,old_group:x.group_level,new_group:x.group_level});$("editStudentForm").classList.add("hidden");$("editStudentForm").reset();msg("studentManagementMessage","تم تحديث اسم الطالب بنجاح.");await loadDashboard()}
+  catch(err){msg("studentManagementMessage","تعذر تعديل الاسم: "+err.message,true)}
+  finally{save.disabled=false;save.textContent="حفظ الاسم"}
+ }
+});
 function weekName(n){return ["","الأول","الثاني","الثالث","الرابع","الخامس"][n]||String(n)}
 function renderPeriodControls(monthly,weekly){
   $("monthlyStatus").textContent=monthly?"نشط — بدأ في "+dateText(monthly.month_start):"لا يوجد تحدٍ شهري نشط";
