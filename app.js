@@ -295,6 +295,7 @@ $("changePasswordForm").onsubmit=async e=>{
   show("adminView");await loadDashboard()
 };
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();pendingAdmin=null;show("homeView")};
+$("adminHomeBtn").onclick=()=>show("homeView");
 async function loadDashboard(){
   try{
     const [s,a,c,w,t,adminProfiles]=await Promise.all([
