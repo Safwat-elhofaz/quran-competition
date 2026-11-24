@@ -519,7 +519,7 @@ function renderStudentManagement(){
  const exactNameExists=dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalizedQuery);
  const looksLikeCode=/^[0-9٠-٩۰-۹]+$/.test(query);
  const addForm=!exactNameExists&&!looksLikeCode
-  ? "<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>الاسم المكتوب في البحث جاهز للإضافة. اختر المجموعة وسيتم توليد كود فريد من خمسة أرقام.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(query)+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>"
+  ? "<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>الاسم الذي كتبته غير مسجل كاسم مطابق. اختر المجموعة ثم اضغط إضافة الطالب؛ سيتم توليد كود فريد من خمسة أرقام تلقائيًا.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(query)+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>"
   : "";
  const results=rows.length?rows.map(x=>{
   const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
@@ -541,7 +541,7 @@ async function loadAdminStudentProfile(id){
   if(selectedAdminStudentId===id)renderStudentManagement();
  }
 }
-$("studentAdminSearch").oninput=renderStudentManagement;
+$("studentAdminSearch").oninput=()=>{selectedAdminStudentId=null;adminStudentEntries=null;adminStudentEntriesLoading=false;renderStudentManagement()};
 $("studentManagementResults").onclick=async e=>{
  const openProfile=e.target.closest("[data-open-admin-student]");
  if(openProfile){const id=openProfile.dataset.openAdminStudent;selectedAdminStudentId=id;await loadAdminStudentProfile(id);return}
