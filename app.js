@@ -517,7 +517,7 @@ $("studentManagementResults").addEventListener("submit",async e=>{
 function weekName(n){return ["","الأول","الثاني","الثالث","الرابع","الخامس"][n]||String(n)}
 function renderPeriodControls(monthly,weekly){
   $("monthlyStatus").textContent=monthly?"نشط — من "+dateText(monthly.month_start)+" إلى "+dateText(monthly.month_end):"لا يوجد تحدٍ شهري نشط";
-  if($("monthlyStartDate")){$("monthlyStartDate").value=monthly?.month_start||"";$("monthlyStartDate").disabled=!!monthly;}
+  if($("monthlyStartDate")){$("monthlyStartDate").value=monthly?.month_start||"";$("monthlyStartDate").disabled=false;}
   if($("monthlyEndDate"))$("monthlyEndDate").value=monthly?.month_end||"";
   $("monthlyStartBtn").classList.toggle("hidden",!!monthly);$("monthlyEndBtn").classList.toggle("hidden",!monthly);$("monthlySaveDatesBtn").classList.toggle("hidden",!monthly);
   $("weeklyStatus").textContent=weekly?"نشط — الأسبوع "+weekName(weekly.week_number)+" — من "+dateText(weekly.week_start)+" إلى "+(weekly.week_end?dateText(weekly.week_end):"نهاية غير محددة"):"لا يوجد أسبوع نشط حاليًا";
@@ -608,11 +608,11 @@ $("monthlySaveDatesBtn").onclick=async()=>{
   try{
     const user=await currentAdmin(),active=await activeMonthly();
     if(!active)throw Error("ابدأ التحدي الشهري أولًا.");
-    const end=$("monthlyEndDate").value;
-    if(!end||end<active.month_start)throw Error("تاريخ النهاية يجب أن يكون بعد تاريخ البداية.");
-    const r=await db.rpc("admin_set_monthly_end_date",{p_competition_id:active.id,p_month_end:end});if(r.error)throw r.error;
-    await writeAudit(user,"update","monthly_challenge",active.id,{month_start:active.month_start,month_end:end});
-    msg("pointsMessage","تم حفظ تاريخ نهاية التحدي الشهري.");await loadDashboard();
+    const start=$("monthlyStartDate").value,end=$("monthlyEndDate").value;
+    if(!start||!end||end<start)throw Error("تأكد من صحة تاريخ بداية ونهاية الشهر.");
+    const r=await db.rpc("admin_set_monthly_dates",{p_competition_id:active.id,p_month_start:start,p_month_end:end});if(r.error)throw r.error;
+    await writeAudit(user,"update","monthly_challenge",active.id,{old_month_start:active.month_start,month_start:start,month_end:end});
+    msg("pointsMessage","تم حفظ تواريخ بداية ونهاية التحدي الشهري.");await loadDashboard();
   }catch(e){msg("pointsMessage","تعذر حفظ تاريخ النهاية: "+e.message,true)}
 };
 $("monthlyEndBtn").onclick=async()=>{
