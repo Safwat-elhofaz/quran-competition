@@ -96,7 +96,7 @@ function renderAchievementCard(data){
  const leader=groupStudents[0]||null;
  const gap=leader?Math.max(0,Number(leader.points)-total):null;
  const rank=Number(s.overall_rank)||0,size=Number(s.overall_size)||0;
- const topPercent=rank&&size?Math.min(100,Math.ceil(rank/size*100)):null;
+ const topPercent=rank&&size?Math.min(100,Math.round(rank/size*100)):null;
  const avgDiff=groupAverage?Math.round((total-groupAverage)/groupAverage*100):null;
  const avgLine=!groupAverage?"لا تتوفر بيانات كافية لمتوسط المجموعة.":total>=groupAverage?"أعلى من متوسط المجموعة بـ "+(total-groupAverage)+" نقطة ("+Math.abs(avgDiff)+"%).":"أقل من متوسط المجموعة بـ "+(groupAverage-total)+" نقطة ("+Math.abs(avgDiff)+"%).";
  const goalLine=targetPoints?(total>=targetPoints?"حققت هدف المجموعة ("+targetPoints+" نقطة).":"باقي "+(targetPoints-total)+" نقطة لتحقيق هدف المجموعة."):"لم تُحدد مجموعة مستهدفة لهذا الطالب.";
