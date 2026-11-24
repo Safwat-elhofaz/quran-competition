@@ -6,8 +6,8 @@
 <title>صفوة الحفاظ | مسابقة الشهر</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261124-allstudents2">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script><script defer src="app.js?v=20261124-allstudents2"></script>
+<link rel="stylesheet" href="styles.css?v=20261124-adminlayout1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script><script defer src="app.js?v=20261124-adminlayout1"></script>
 </head>
 <body>
 <header class="topbar"><a class="brand" href="#"><span class="mark">۞</span><span><b>صفوة الحفاظ</b><small>مسابقة النقاط</small></span></a><button id="themeToggle" class="theme" aria-label="تغيير المظهر">☼</button></header>
@@ -61,7 +61,7 @@
 <section id="adminLoginView" class="panel hidden"><button class="back" data-back>→ الرئيسية</button><h2>دخول المشرفين</h2><p>هذه المنطقة مخصصة لإدارة المسابقة</p><form id="loginForm" class="stack"><label for="username">اسم المستخدم</label><input id="username" autocomplete="username" required><label for="password">كلمة المرور</label><input id="password" type="password" autocomplete="current-password" required><button class="primary">تسجيل الدخول ←</button></form><p id="loginMessage" class="message" aria-live="polite"></p></section>
 <section id="changePasswordView" class="panel hidden"><h2>تغيير كلمة المرور</h2><p>دي كلمة مرور مؤقتة. اختار كلمة مرور جديدة خاصة بيك قبل استخدام لوحة التحكم.</p><form id="changePasswordForm" class="stack"><label for="newAdminPassword">كلمة المرور الجديدة</label><input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" required><label for="confirmAdminPassword">تأكيد كلمة المرور</label><input id="confirmAdminPassword" type="password" minlength="12" autocomplete="new-password" required><button class="primary">حفظ كلمة المرور</button></form><p id="changePasswordMessage" class="message" aria-live="polite"></p></section>
 <section id="adminView" class="hidden">
-<div class="dashhead"><div><div class="eyebrow">لوحة التحكم</div><h2>إدارة المسابقة</h2><p id="adminWelcome">أهلًا بك</p></div><button id="logoutBtn" class="secondary">تسجيل الخروج</button></div>
+<div class="admin-topbar"><button id="adminHomeBtn" class="admin-home-back" type="button" aria-label="العودة إلى القائمة الرئيسية" title="العودة إلى القائمة الرئيسية">↑</button><div class="dashhead"><div><div class="eyebrow">لوحة التحكم</div><h2>إدارة المسابقة</h2><p id="adminWelcome">أهلًا بك</p></div></div></div>
 <div class="stats"><article><span>إجمالي الطلاب</span><strong id="studentsCount">—</strong></article><article><span>إجمالي النقاط التراكمي</span><strong id="pointsCount">—</strong></article><article><span>المشرفون النشطون</span><strong id="adminsCount">—</strong></article></div>
 <details class="admin-accordion" open><summary>إدارة الطلاب<span>بحث · تعديل النقاط · تعديل الاسم · حذف · إضافة</span></summary><section class="content"><h3>إدارة الطلاب</h3>
 <p class="muted-note">ابحث باسم الطالب أو الكود. ستظهر أدوات التعديل أسفل نتيجة كل طالب.</p>
@@ -81,6 +81,7 @@
 <details class="admin-accordion"><summary>أرشيف التحديات<span>عرض التفاصيل</span></summary><section class="content"><h3>سجل التحديات السابقة</h3><div class="admin-grid"><div><h4>التحديات الأسبوعية</h4><div class="table-wrap"><table><thead><tr><th>التحدي</th><th>البداية</th><th>الحالة</th><th></th></tr></thead><tbody id="weeklyHistory"><tr><td colspan="4">جاري التحميل...</td></tr></tbody></table></div></div><div><h4>التحديات الشهرية</h4><div class="table-wrap"><table><thead><tr><th>الشهر</th><th>البداية</th><th>الحالة</th><th></th></tr></thead><tbody id="monthlyHistory"><tr><td colspan="4">جاري التحميل...</td></tr></tbody></table></div></div></div></section></details>
 <section id="challengeResultsPanel" class="content hidden"><h3 id="challengeResultsTitle">نتائج التحدي</h3><div class="table-wrap"><table><thead><tr><th>الترتيب</th><th>اسم الطالب</th><th>النقاط</th></tr></thead><tbody id="challengeResultsTable"></tbody></table></div></section>
 <details class="admin-accordion"><summary>سجل العمليات<span>عرض التفاصيل</span></summary><section class="content"><h3>سجل التعديلات اليدوية</h3><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>الطالب</th><th>التعديل</th><th>قبل ← بعد</th><th>السبب</th><th>المشرف</th></tr></thead><tbody id="manualAdjustmentHistory"><tr><td colspan="6">جاري التحميل...</td></tr></tbody></table></div></section></details>
+<div class="admin-logout-footer"><button id="logoutBtn" class="secondary" type="button">تسجيل الخروج</button></div>
 
 </section>
 </main><footer>۞ مركز صفوة الحفاظ<small>نسأل الله القبول والتوفيق</small></footer>
