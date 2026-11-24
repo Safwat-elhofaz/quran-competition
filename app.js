@@ -46,7 +46,7 @@ function leaderboardRows(rows,groupName=null){
  let previousPoints=null,currentRank=0;
  return rows.map((x,i)=>{
   const points=Number(x.points)||0,repeated=i>0&&points===previousPoints;
-  if(!repeated)currentRank=i+1;
+  if(!repeated)currentRank++;
   previousPoints=points;
   const threshold=targetGroupThreshold(groupName),status=threshold===null?"":points>=threshold?"<small class='leaderboard-progress-status is-reached'>حقق المجموعة</small>":"<small class='leaderboard-progress-status'>لسه في الطريق</small>";
   return '<tr><td><span class="leaderboard-rank rank-'+currentRank+'">'+rankLabel(currentRank,repeated)+'</span></td><td class="leaderboard-student">'+esc(x.name)+'</td><td class="leaderboard-points">'+points.toLocaleString("en-US")+status+'</td></tr>';
@@ -91,7 +91,7 @@ async function loadPublicChallengeArchive(){
   host.querySelectorAll(".public-archive-result").forEach(btn=>btn.onclick=async()=>{
    const box=btn.closest(".public-archive-month").querySelector(".public-archive-results");btn.disabled=true;
    try{const {data,error}=await db.rpc("public_challenge_top10",{p_period_type:btn.dataset.publicType,p_period_id:btn.dataset.publicId});if(error)throw error;
-    const rows=data||[];let previousPoints=null,currentRank=0;const resultRows=rows.map((x,i)=>{const points=Number(x.total_points)||0,repeated=i>0&&points===previousPoints;if(!repeated)currentRank=i+1;previousPoints=points;return "<tr><td>"+rankLabel(currentRank,repeated)+"</td><td>"+esc(x.student_name)+"</td><td>"+points.toLocaleString("en-US")+"</td></tr>"}).join("");box.innerHTML="<h4>"+(btn.dataset.publicType==="monthly"?"أفضل 10 في الشهر":"أفضل 10 في الأسبوع")+"</h4>"+(rows.length?"<div class='table-wrap'><table><thead><tr><th>المركز</th><th>اسم الطالب</th><th>النقاط</th></tr></thead><tbody>"+resultRows+"</tbody></table></div>":"<p class='muted-note'>لا توجد نتائج مسجلة.</p>");box.classList.remove("hidden");
+    const rows=data||[];let previousPoints=null,currentRank=0;const resultRows=rows.map((x,i)=>{const points=Number(x.total_points)||0,repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return "<tr><td>"+rankLabel(currentRank,repeated)+"</td><td>"+esc(x.student_name)+"</td><td>"+points.toLocaleString("en-US")+"</td></tr>"}).join("");box.innerHTML="<h4>"+(btn.dataset.publicType==="monthly"?"أفضل 10 في الشهر":"أفضل 10 في الأسبوع")+"</h4>"+(rows.length?"<div class='table-wrap'><table><thead><tr><th>المركز</th><th>اسم الطالب</th><th>النقاط</th></tr></thead><tbody>"+resultRows+"</tbody></table></div>":"<p class='muted-note'>لا توجد نتائج مسجلة.</p>");box.classList.remove("hidden");
    }catch(e){box.innerHTML="<p class='muted-note'>تعذر تحميل النتائج حاليًا.</p>";box.classList.remove("hidden")}
    finally{btn.disabled=false}
   });
@@ -263,7 +263,7 @@ async function loadStudentReportRankings(student){
  try{
   const {data,error}=await db.rpc("public_leaderboards");if(error)throw error;
   const overall=(data?.overall||[]).slice(0,10),byLevel=(data?.groups?.[student.group_level]||[]).slice(0,10);
-  const render=rows=>{let previousPoints=null,currentRank=0;return rows.length?rows.map((x,i)=>{const points=Number(x.points)||0,repeated=i>0&&points===previousPoints;if(!repeated)currentRank=i+1;previousPoints=points;return '<li class="'+(x.name===student.full_name?'is-me':'')+'"><span>'+rankLabel(currentRank,repeated)+'</span><b>'+esc(x.name)+(x.name===student.full_name?' (أنت)':'')+'</b><strong>'+points.toLocaleString("en-US")+'</strong></li>'}).join(""):'<li>لا توجد بيانات متاحة حاليًا.</li>'};
+  const render=rows=>{let previousPoints=null,currentRank=0;return rows.length?rows.map((x,i)=>{const points=Number(x.points)||0,repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<li class="'+(x.name===student.full_name?'is-me':'')+'"><span>'+rankLabel(currentRank,repeated)+'</span><b>'+esc(x.name)+(x.name===student.full_name?' (أنت)':'')+'</b><strong>'+points.toLocaleString("en-US")+'</strong></li>'}).join(""):'<li>لا توجد بيانات متاحة حاليًا.</li>'};
   $("studentOverallTop").innerHTML=render(overall);$("studentLevelTop").innerHTML=render(byLevel);
  }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";$("studentLevelTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
 }
@@ -370,7 +370,7 @@ function adminRankFor(rows,id){
   let rank=0,previous=null;
   for(let i=0;i<sorted.length;i++){
    const points=Number(sorted[i].total_points||0),repeated=i>0&&points===previous;
-   if(!repeated)rank=i+1;
+   if(!repeated)rank++;
    if(sorted[i].student_id===id)return rankLabel(rank,repeated);
    previous=points;
   }
@@ -436,7 +436,7 @@ function renderAllStudentsRanking(){
  const studentsById=new Map(dashboardStudents.map(s=>[s.id,s]));
  const rows=dashboardRanked.map(x=>({...x,student:studentsById.get(x.student_id)})).filter(x=>x.student);
  let previousPoints=null,currentRank=0;
- body.innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points||0),repeated=i>0&&points===previousPoints;if(!repeated)currentRank=i+1;previousPoints=points;return '<tr><td class="all-students-rank">'+rankLabel(currentRank,repeated)+'</td><td class="all-students-name">'+esc(x.full_name||x.student.full_name)+'</td><td class="all-students-points">'+points.toLocaleString("en-US")+'</td><td><span class="all-students-group">'+esc(x.student.group_level||"غير محددة")+'</span></td></tr>'}).join(""):'<tr><td colspan="4" class="muted-note">لا يوجد طلاب مسجلون حتى الآن.</td></tr>';
+ body.innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points||0),repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<tr><td class="all-students-rank">'+rankLabel(currentRank,repeated)+'</td><td class="all-students-name">'+esc(x.full_name||x.student.full_name)+'</td><td class="all-students-points">'+points.toLocaleString("en-US")+'</td><td><span class="all-students-group">'+esc(x.student.group_level||"غير محددة")+'</span></td></tr>'}).join(""):'<tr><td colspan="4" class="muted-note">لا يوجد طلاب مسجلون حتى الآن.</td></tr>';
 }
 function renderStudentManagement(){
  const query=$("studentAdminSearch").value.trim().toLocaleLowerCase("ar");
@@ -576,7 +576,7 @@ async function showPeriodResults(type,id){
     }else rows.sort((a,b)=>a.rank-b.rank||a.full_name.localeCompare(b.full_name,"ar"));
     $("challengeResultsTitle").textContent=monthly?"نتائج التحدي الشهري":"نتائج التحدي الأسبوعي";
     let lastPoints=null,lastRank=0;
-    $("challengeResultsTable").innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points)||0,repeated=i>0&&points===lastPoints;if(!repeated)lastRank=i+1;lastPoints=points;return "<tr><td>"+rankLabel(lastRank,repeated)+"</td><td>"+esc(x.full_name)+"</td><td>"+points.toLocaleString("en-US")+"</td></tr>"}).join(""):'<tr><td colspan="3">لا توجد نقاط مسجلة لهذا التحدي</td></tr>';
+    $("challengeResultsTable").innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points)||0,repeated=i>0&&points===lastPoints;if(!repeated)lastRank++;lastPoints=points;return "<tr><td>"+rankLabel(lastRank,repeated)+"</td><td>"+esc(x.full_name)+"</td><td>"+points.toLocaleString("en-US")+"</td></tr>"}).join(""):'<tr><td colspan="3">لا توجد نقاط مسجلة لهذا التحدي</td></tr>';
     $("challengeResultsPanel").classList.remove("hidden");$("challengeResultsPanel").scrollIntoView({behavior:"smooth",block:"start"})
   }catch(e){msg("pointsMessage","تعذر عرض النتائج: "+e.message,true)}
 }
