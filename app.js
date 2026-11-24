@@ -369,10 +369,54 @@ async function loadDashboard(){
     renderStudentManagement();
     if(selectedAdminStudentId)loadAdminStudentProfile(selectedAdminStudentId);
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
+     await loadAchievementCardAdminHistory(adminProfiles.data||[]);
     renderPeriodControls(c,w);await loadHistory(c)
   }catch(e){msg("addStudentMessage","تعذر تحميل البيانات: "+e.message,true)}
 }
 
+async function loadAchievementCardAdminHistory(admins=[]){
+ const host=$("achievementCardAdminHistory");if(!host)return;
+ const r=await db.from("admin_audit_logs").select("created_at,admin_user_id,entity_id,action,details").eq("entity_type","achievement_card").order("created_at",{ascending:false}).limit(30);
+ if(r.error)throw r.error;
+ const adminMap=new Map((admins||[]).map(x=>[x.user_id,x.display_name]));
+ host.innerHTML=(r.data||[]).length?r.data.map(x=>{
+  const d=x.details||{},action=x.action==="REVOKE"?"إلغاء اعتماد":x.action==="REACTIVATE"?"إعادة اعتماد":x.action;
+  return "<tr><td>"+new Date(x.created_at).toLocaleString("ar-EG")+"</td><td dir='ltr'>"+esc(x.entity_id||"—")+"</td><td>"+esc(d.student_name||"—")+"</td><td>"+action+"</td><td>"+esc(d.reason||"—")+"</td><td>"+esc(adminMap.get(x.admin_user_id)||"مشرف")+"</td></tr>";
+ }).join(""):'<tr><td colspan="6">لا توجد عمليات على كروت الإنجاز حتى الآن.</td></tr>';
+}
+function normalizeCardNumber(value){
+ return String(value||"").replace(/[٠-٩]/g,d=>String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[۰-۹]/g,d=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/\s/g,"");
+}
+async function searchAchievementCardAdmin(){
+ const number=normalizeCardNumber($("achievementCardAdminNumber").value);
+ $("achievementCardAdminNumber").value=number;
+ $("achievementCardAdminResult").innerHTML="";
+ if(!/^[0-9]{8}$/.test(number)){msg("achievementCardAdminMessage","رقم الكارت لازم يكون 8 أرقام.",true);return}
+ msg("achievementCardAdminMessage","جاري البحث عن الكارت...");
+ try{
+  const {data,error}=await db.rpc("verify_achievement_card",{p_card_number:number});if(error)throw error;
+  if(!data?.found){msg("achievementCardAdminMessage","لا يوجد كارت مسجل بهذا الرقم.",true);return}
+  const active=data.status==="active";
+  $("achievementCardAdminResult").innerHTML="<div class='achievement-admin-card'><div><small>اسم الطالب</small><strong>"+esc(data.student_name)+"</strong></div><div><small>رقم الكارت</small><strong dir='ltr'>"+esc(data.card_number)+"</strong></div><div><small>الحالة الحالية</small><strong class='"+(active?"status-active":"achievement-status-revoked")+"'>"+(active?"معتمد وصالح":"ملغي الاعتماد")+"</strong></div><div><small>تاريخ الإصدار</small><strong>"+new Date(data.issued_at).toLocaleString("ar-EG")+"</strong></div>"+(active?"<label for='achievementCardRevokeReason'>سبب إلغاء الاعتماد (اختياري)</label><textarea id='achievementCardRevokeReason' rows='2' maxlength='500' placeholder='اكتب سبب الإلغاء إن وجد'></textarea><button type='button' class='danger-btn' id='achievementCardRevokeBtn'>إلغاء اعتماد الكارت</button>":"<p class='muted-note'>هذا الكارت غير صالح حاليًا، ويمكن إعادة اعتماده عند الحاجة.</p><button type='button' class='primary' id='achievementCardReactivateBtn'>إعادة اعتماد الكارت</button>")+"</div>";
+  $("achievementCardRevokeBtn")?.addEventListener("click",()=>setAchievementCardAdminStatus(number,"revoke",$("achievementCardRevokeReason").value.trim()));
+  $("achievementCardReactivateBtn")?.addEventListener("click",()=>setAchievementCardAdminStatus(number,"reactivate",""));
+  msg("achievementCardAdminMessage","");
+ }catch(e){msg("achievementCardAdminMessage","تعذر البحث عن الكارت: "+e.message,true)}
+}
+async function setAchievementCardAdminStatus(number,action,reason){
+ const label=action==="revoke"?"إلغاء اعتماد الكارت":"إعادة اعتماد الكارت";
+ if(!confirm("هل أنت متأكد من "+label+" رقم "+number+"؟"))return;
+ const buttons=$("achievementCardAdminResult").querySelectorAll("button");buttons.forEach(b=>b.disabled=true);
+ try{
+  const {data,error}=await db.rpc("admin_set_achievement_card_status",{p_card_number:number,p_action:action,p_reason:reason||null});if(error)throw error;
+  msg("achievementCardAdminMessage",action==="revoke"?"تم إلغاء اعتماد الكارت. عند مسح QR ستظهر حالة الإلغاء.":"تمت إعادة اعتماد الكارت بنجاح.");
+  await searchAchievementCardAdmin();
+  const admins=await db.from("admin_profiles").select("user_id,display_name").eq("is_active",true);
+  if(admins.error)throw admins.error;
+  await loadAchievementCardAdminHistory(admins.data||[]);
+ }catch(e){msg("achievementCardAdminMessage","تعذر تنفيذ العملية: "+e.message,true);buttons.forEach(b=>b.disabled=false)}
+}
+$("achievementCardAdminForm").onsubmit=async e=>{e.preventDefault();await searchAchievementCardAdmin()};
 async function loadManualAdjustmentHistory(students,admins){
   const r=await db.from("admin_audit_logs").select("created_at,admin_user_id,details").eq("entity_type","point_entry").filter("details->>entry_type","eq","adjustment").order("created_at",{ascending:false}).limit(20);
   if(r.error)throw r.error;
