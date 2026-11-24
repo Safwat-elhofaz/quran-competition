@@ -312,6 +312,7 @@ async function loadDashboard(){
     const rankById=new Map();let currentRank=0,previousPoints=null;
     ranked.forEach((x,i)=>{if(i===0||x.total_points!==previousPoints)currentRank=i+1;rankById.set(x.student_id,currentRank);previousPoints=x.total_points});
     dashboardRankById=rankById;
+    renderAllStudentsRanking();
     renderStudentManagement();
     if(selectedAdminStudentId)loadAdminStudentProfile(selectedAdminStudentId);
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
@@ -393,6 +394,13 @@ function renderAdminStudentProfile(student){
   "<section class='admin-performance-section'><h3>ترتيب الطالب</h3><div class='admin-performance-ranks'><article><small>الترتيب العام</small><strong>"+(overallRank??"—")+"</strong><span>من "+allRows.length+" طالب نشط</span></article><article><small>ترتيبه في المجموعة</small><strong>"+(groupRank??"—")+"</strong><span>"+esc(group)+" · "+groupRows.length+" طالب</span></article><article><small>ترتيبه في مستوى النقاط</small><strong>"+(levelRank??"—")+"</strong><span>"+esc(currentLevel)+" · "+levelRows.length+" طالب</span></article></div></section>"+
   "<section class='admin-performance-section'><h3>آخر عمليات النقاط</h3><div class='table-wrap'><table><thead><tr><th>التاريخ</th><th>التغيير</th><th>السبب</th><th>الإجمالي بعد العملية</th></tr></thead><tbody>"+recentRows+"</tbody></table></div></section>"+
   "</div>";
+}
+function renderAllStudentsRanking(){
+ const body=$("allStudentsRanking");
+ if(!body)return;
+ const studentsById=new Map(dashboardStudents.map(s=>[s.id,s]));
+ const rows=dashboardRanked.map(x=>({...x,student:studentsById.get(x.student_id)})).filter(x=>x.student);
+ body.innerHTML=rows.length?rows.map((x,i)=>'<tr><td class="all-students-rank">'+(i+1)+'</td><td class="all-students-name">'+esc(x.full_name||x.student.full_name)+'</td><td class="all-students-points">'+Number(x.total_points||0).toLocaleString("en-US")+'</td><td><span class="all-students-group">'+esc(x.student.group_level||"غير محددة")+'</span></td></tr>').join(""):'<tr><td colspan="4" class="muted-note">لا يوجد طلاب مسجلون حتى الآن.</td></tr>';
 }
 function renderStudentManagement(){
  const query=$("studentAdminSearch").value.trim().toLocaleLowerCase("ar");
