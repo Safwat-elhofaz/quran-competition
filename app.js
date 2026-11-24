@@ -370,7 +370,7 @@ async function loadDashboard(){
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
      await loadAchievementCardAdminHistory(adminProfiles.data||[]);
     renderPeriodControls(c,w);await loadHistory(c)
-  }catch(e){msg("addStudentMessage","تعذر تحميل البيانات: "+e.message,true)}
+  }catch(e){msg("studentManagementMessage","تعذر تحميل البيانات: "+e.message,true)}
 }
 
 async function loadAchievementCardAdminHistory(admins=[]){
@@ -504,7 +504,8 @@ function renderAllStudentsRanking(){
  body.innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points||0),repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<tr><td class="all-students-rank">'+rankLabel(currentRank,repeated)+'</td><td class="all-students-name">'+esc(x.full_name||x.student.full_name)+'</td><td class="all-students-points">'+points.toLocaleString("en-US")+'</td><td><span class="all-students-group">'+esc(x.student.group_level||"غير محددة")+'</span></td></tr>'}).join(""):'<tr><td colspan="4" class="muted-note">لا يوجد طلاب مسجلون حتى الآن.</td></tr>';
 }
 function renderStudentManagement(){
- const query=$("studentAdminSearch").value.trim().toLocaleLowerCase("ar");
+ const query=$("studentAdminSearch").value.trim();
+ const normalizedQuery=normalizeStudentName(query);
  if(selectedAdminStudentId){
   const student=dashboardStudents.find(x=>x.id===selectedAdminStudentId);
   if(!student){selectedAdminStudentId=null;adminStudentEntries=null}
@@ -513,12 +514,18 @@ function renderStudentManagement(){
    $("studentManagementResults").innerHTML=renderAdminStudentProfile(student);return;
   }
  }
- if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث.</p>';return}
- const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(query)||x.student_code.includes(query)).slice(0,30);
- $("studentManagementResults").innerHTML=rows.length?rows.map(x=>{
+ if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث، ولو الاسم غير مسجل هيظهر لك خيار إضافته.</p>';return}
+ const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(normalizedQuery)||x.student_code.includes(query)).slice(0,30);
+ const exactNameExists=dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalizedQuery);
+ const looksLikeCode=/^[0-9٠-٩۰-۹]+$/.test(query);
+ const addForm=!exactNameExists&&!looksLikeCode
+  ? "<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>الاسم المكتوب في البحث جاهز للإضافة. اختر المجموعة وسيتم توليد كود فريد من خمسة أرقام.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(query)+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>"
+  : "";
+ const results=rows.length?rows.map(x=>{
   const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
   return "<article class='student-search-card'><div class='student-search-card-info'><button type='button' class='admin-student-name-link' data-open-admin-student='"+x.id+"'>"+esc(x.full_name)+"</button><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><button type='button' class='secondary admin-open-profile' data-open-admin-student='"+x.id+"'>فتح ملف الطالب ←</button></article>"
  }).join(""):'<p class="muted-note">لا توجد نتائج مطابقة لعملية البحث.</p>';
+ $("studentManagementResults").innerHTML=results+addForm;
 }
 async function loadAdminStudentProfile(id){
  adminStudentEntriesLoading=true;adminStudentEntries=null;renderStudentManagement();
@@ -565,6 +572,28 @@ $("studentManagementResults").addEventListener("click",e=>{
  if(cancelGroup){$("editStudentGroupForm").classList.add("hidden");$("editStudentGroupForm").reset();return}
 });
 $("studentManagementResults").addEventListener("submit",async e=>{
+ if(e.target.id==="addStudentForm"){
+  e.preventDefault();
+  const name=$("newStudentName").value.trim(),group=$("newStudentGroup").value;
+  if(!name||!group){msg("studentManagementMessage","اكتب اسم الطالب واختر المجموعة.",true);return}
+  if(dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalizeStudentName(name))){
+   msg("studentManagementMessage","الاسم مسجل بالفعل. افتح نتيجة الطالب الموجودة لتعديل بياناته.",true);return;
+  }
+  const submit=e.target.querySelector("button");
+  try{
+   submit.disabled=true;submit.textContent="جاري الإضافة...";
+   msg("studentManagementMessage","جاري إضافة الطالب وتوليد الكود...");
+   const r=await db.rpc("admin_create_student",{p_full_name:name,p_group_level:group});if(r.error)throw r.error;
+   const x=Array.isArray(r.data)?r.data[0]:r.data;if(!x?.student_code)throw Error("لم يصل كود الطالب.");
+   await loadDashboard();
+   msg("studentManagementMessage","تمت إضافة "+x.full_name+" إلى مجموعة "+group+". كود الطالب: "+x.student_code+" — احتفظ بالكود.");
+  }catch(err){
+   const message=String(err.message||"");
+   msg("studentManagementMessage",message.includes("بنفس الاسم")?"الاسم مسجل بالفعل. افتح نتيجة الطالب الموجودة لتعديلها.":"تعذر إضافة الطالب: "+message,true);
+   submit.disabled=false;submit.textContent="إضافة الطالب وتوليد الكود";
+  }
+  return;
+ }
  if(e.target.id==="editStudentGroupForm"){
   e.preventDefault();const id=$("editStudentGroupId").value,x=dashboardStudents.find(v=>v.id===id),group=$("editStudentGroup").value;
   if(!x||!group){msg("studentManagementMessage","اختر مجموعة صحيحة للطالب.",true);return}
@@ -694,18 +723,7 @@ $("monthlyEndBtn").onclick=async()=>{
     await writeAudit(user,"end","monthly_challenge",active.id,{month_start:active.month_start});msg("pointsMessage","انتهى التحدي الشهري وحُفظت نتائجه.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الشهري: "+e.message,true)}
 };
-$("addStudentForm").onsubmit=async e=>{
- e.preventDefault();const name=$("newStudentName").value.trim(),group=$("newStudentGroup").value;
- if(!name||!group){msg("addStudentMessage","اكتب اسم الطالب واختر المجموعة.",true);return}
- if(dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalizeStudentName(name))){msg("addStudentMessage","لا يمكن الإضافة: يوجد طالب مسجل بنفس الاسم بالفعل.",true);return}
- const submit=$("addStudentForm").querySelector("button");
- try{submit.disabled=true;submit.textContent="جاري الإضافة...";$("addStudentMessage").textContent="جاري إضافة الطالب وتوليد الكود...";
- const r=await db.rpc("admin_create_student",{p_full_name:name,p_group_level:group});if(r.error)throw r.error;
- const x=Array.isArray(r.data)?r.data[0]:r.data;if(!x?.student_code)throw Error("لم يصل كود الطالب.");
- $("addStudentForm").reset();msg("addStudentMessage","تمت إضافة "+x.full_name+" إلى مجموعة "+group+". كود الطالب: "+x.student_code+" — احتفظ بالكود.");await loadDashboard();
- }catch(err){const message=String(err.message||"");msg("addStudentMessage",message.includes("بنفس الاسم")?"لا يمكن الإضافة: يوجد طالب مسجل بنفس الاسم بالفعل.":"تعذر إضافة الطالب: "+message,true)}
- finally{submit.disabled=false;submit.textContent="إضافة الطالب وتوليد الكود"}
-};
+
 
 loadPublicLeaderboards();
 (async()=>{const r=await db.auth.getSession();if(r.data.session){try{await routeAdmin(r.data.session.user)}catch(e){await db.auth.signOut()}}})();
