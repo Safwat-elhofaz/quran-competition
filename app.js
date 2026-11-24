@@ -163,19 +163,39 @@ function renderAchievementCard(data){
  .replace("__REMAIN__",targetPoints?(total>=targetPoints?"تم تحقيق الهدف":"باقي "+(targetPoints-total).toLocaleString("en-US")+" نقطة"):"لا يوجد هدف محدد")
  .replace("__GRAPH__",graph).replace("__SUMMARY__",summary);
 }
-function createAchievementExportStage(){
+async function createAchievementExportStage(){
  if(!currentAchievementData)throw Error("بيانات كارت الإنجاز غير متاحة");
  const holder=document.createElement("div");
  holder.className="achievement-export-stage";
  holder.innerHTML=renderAchievementCard(currentAchievementData);
  const card=holder.querySelector("#studentAchievementCard");
  if(!card)throw Error("تعذر تجهيز تصميم الكارت");
+ if(!window.QRCode)throw Error("تعذر تحميل مولّد رمز QR. حدّث الصفحة وحاول مرة أخرى.");
+ const studentCode=currentAchievementData?.student?.student_code;
+ if(!studentCode)throw Error("كود الطالب غير متاح لإنشاء كارت الإنجاز.");
+ const {data:cardData,error:cardError}=await db.rpc("get_or_create_achievement_card",{p_student_code:String(studentCode)});
+ if(cardError)throw cardError;
+ if(!cardData?.card_number)throw Error("تعذر إنشاء رقم كارت الإنجاز.");
+ const qrBox=document.createElement("div");
+ qrBox.className="achievement-card-qr";
+ const qrCanvas=document.createElement("div");
+ qrCanvas.className="achievement-card-qr-code";
+ const qrNumber=document.createElement("b");
+ qrNumber.className="achievement-card-number";
+ qrNumber.textContent=cardData.card_number;
+ qrBox.append(qrCanvas,qrNumber);
+ card.appendChild(qrBox);
+ const verifyUrl="https://safwat-elhofaz.github.io/quran-competition/verify-card.html?card="+encodeURIComponent(cardData.card_number);
+ new QRCode(qrCanvas,{text:verifyUrl,width:126,height:126,colorDark:"#075443",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
  const style=document.createElement("style");
  style.textContent=`
  .achievement-export-stage{position:fixed!important;left:-12000px!important;top:0!important;width:1080px!important;height:1920px!important;z-index:-1!important;overflow:hidden!important;direction:rtl!important}
  .achievement-export-stage .achievement-preview-wrap{display:block!important;width:1080px!important;height:1920px!important;margin:0!important}
  .achievement-export-stage .achievement-preview-heading{display:none!important}
  .achievement-export-stage .achievement-card{box-sizing:border-box!important;width:1080px!important;height:1920px!important;min-height:1920px!important;max-height:1920px!important;aspect-ratio:auto!important;overflow:hidden!important;padding:58px 66px!important;gap:17px!important;border:7px solid #e5c46a!important;border-radius:16px!important;outline:2px solid rgba(229,196,106,.4)!important;outline-offset:-20px!important;box-shadow:none!important;justify-content:space-between!important}
+ .achievement-export-stage .achievement-card-qr{position:absolute!important;left:48px!important;top:42px!important;z-index:10!important;width:148px!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:5px!important;padding:6px!important;border:2px solid #e5c46a!important;border-radius:8px!important;background:#fff!important;direction:ltr!important}
+ .achievement-export-stage .achievement-card-qr-code,.achievement-export-stage .achievement-card-qr-code canvas,.achievement-export-stage .achievement-card-qr-code img{display:block!important;width:126px!important;height:126px!important}
+ .achievement-export-stage .achievement-card-number{font-family:Arial,sans-serif!important;font-size:25px!important;line-height:1.1!important;letter-spacing:2px!important;font-weight:800!important;color:#075443!important;text-align:center!important}
  .achievement-export-stage .achievement-card-header{padding-bottom:16px!important;gap:16px!important}
  .achievement-export-stage .achievement-card-header b{font-size:42px!important}.achievement-export-stage .achievement-card-header small{font-size:24px!important}.achievement-export-stage .achievement-mark{font-size:40px!important}
  .achievement-export-stage .achievement-student-name{gap:7px!important}.achievement-export-stage .achievement-student-name h2{font-size:54px!important;line-height:1.35!important}.achievement-export-stage .achievement-student-name span{font-size:29px!important}
@@ -192,9 +212,10 @@ function createAchievementExportStage(){
  document.body.appendChild(holder);
  return {holder,card};
 }
-function printStudentAchievementCard(){
+async function printStudentAchievementCard(){
  let stage;
- try{stage=createAchievementExportStage()}catch(e){$("studentExportMessage").textContent=e.message;return}
+ const status=$("studentExportMessage");
+ try{stage=await createAchievementExportStage()}catch(e){status.textContent=e.message||"تعذر تجهيز كارت الإنجاز";return}
  document.body.classList.add("printing-achievement-card");
  const cleanup=()=>{document.body.classList.remove("printing-achievement-card");stage.holder.remove()};
  window.addEventListener("afterprint",cleanup,{once:true});
@@ -275,7 +296,7 @@ async function saveStudentReportImage(){
  status.textContent="لحظات، بنجهز كارت الإنجاز كاملًا بمقاس الستوري...";
  let stage=null;
  try{
-  stage=createAchievementExportStage();
+  stage=await createAchievementExportStage();
   await document.fonts.ready;
   const canvas=await window.html2canvas(stage.card,{scale:1.5,backgroundColor:"#075443",useCORS:true,logging:false,width:1080,height:1920,windowWidth:1080,windowHeight:1920,scrollX:0,scrollY:0});
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
