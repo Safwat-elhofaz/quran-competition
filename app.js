@@ -515,25 +515,30 @@ function renderAllStudentsRanking(){
  let previousPoints=null,currentRank=0;
  body.innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points||0),repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<tr><td class="all-students-rank">'+rankLabel(currentRank,repeated)+'</td><td class="all-students-name">'+esc(x.full_name||x.student.full_name)+'</td><td class="all-students-points">'+points.toLocaleString("en-US")+'</td><td><span class="all-students-group">'+esc(x.student.group_level||"غير محددة")+'</span></td></tr>'}).join(""):'<tr><td colspan="4" class="muted-note">لا يوجد طلاب مسجلون حتى الآن.</td></tr>';
 }
+function renderStudentAddForm(query){
+ const normalized=normalizeStudentName(query||"");
+ const exact=!!query&&dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalized);
+ const looksLikeCode=/^[0-9٠-٩۰-۹]+$/.test(query||"");
+ const prefill=query&&!exact&&!looksLikeCode?query:"";
+ return "<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>اكتب اسم الطالب واختر المجموعة؛ سيتم توليد كود فريد من خمسة أرقام تلقائيًا.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(prefill)+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>";
+}
 function renderStudentManagement(){
  const query=$("studentAdminSearch").value.trim();
  const normalizedQuery=normalizeStudentName(query);
+ const addForm=renderStudentAddForm(query);
  if(selectedAdminStudentId){
   const student=dashboardStudents.find(x=>x.id===selectedAdminStudentId);
   if(!student){selectedAdminStudentId=null;adminStudentProfileOpenId=null;adminStudentEntries=null}
   else{
    if(adminStudentProfileOpenId===student.id){
-    if(adminStudentEntriesLoading){$("studentManagementResults").innerHTML="<p class='muted-note'>جاري تحميل سجل أداء الطالب...</p>";return}
-    $("studentManagementResults").innerHTML=renderAdminStudentProfile(student);return;
+    if(adminStudentEntriesLoading){$("studentManagementResults").innerHTML="<p class='muted-note'>جاري تحميل سجل أداء الطالب...</p>"+addForm;return}
+    $("studentManagementResults").innerHTML=renderAdminStudentProfile(student)+addForm;return;
    }
-   $("studentManagementResults").innerHTML=renderAdminStudentQuickView(student);return;
+   $("studentManagementResults").innerHTML=renderAdminStudentQuickView(student)+addForm;return;
   }
  }
- if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث، ولو الاسم غير مسجل هيظهر لك خيار إضافته.</p>';return}
+ if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث.</p>'+addForm;return}
  const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(normalizedQuery)||x.student_code.includes(query)).slice(0,30);
- const exactNameExists=dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalizedQuery);
- const looksLikeCode=/^[0-9٠-٩۰-۹]+$/.test(query);
- const addForm="<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>اكتب اسم الطالب واختر المجموعة؛ سيتم توليد كود فريد من خمسة أرقام تلقائيًا.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(!exactNameExists&&!looksLikeCode?query:"")+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>";
  const results=rows.length?rows.map(x=>{
   const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
   return "<article class='student-search-card'><div class='student-search-card-info'><button type='button' class='admin-student-name-link' data-select-admin-student='"+x.id+"'>"+esc(x.full_name)+"</button><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><button type='button' class='secondary admin-select-profile' data-select-admin-student='"+x.id+"'>عرض بيانات الطالب</button></article>"
