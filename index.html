@@ -6,8 +6,8 @@
 <title>صفوة الحفاظ | مسابقة الشهر</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261124-cardexport2">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script><script defer src="app.js?v=20261124-cardcredit1"></script>
+<link rel="stylesheet" href="styles.css?v=20261124-allstudents1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script><script defer src="app.js?v=20261124-allstudents1"></script>
 </head>
 <body>
 <header class="topbar"><a class="brand" href="#"><span class="mark">۞</span><span><b>صفوة الحفاظ</b><small>مسابقة النقاط</small></span></a><button id="themeToggle" class="theme" aria-label="تغيير المظهر">☼</button></header>
@@ -63,6 +63,7 @@
 <section id="adminView" class="hidden">
 <div class="dashhead"><div><div class="eyebrow">لوحة التحكم</div><h2>إدارة المسابقة</h2><p id="adminWelcome">أهلًا بك</p></div><button id="logoutBtn" class="secondary">تسجيل الخروج</button></div>
 <div class="stats"><article><span>إجمالي الطلاب</span><strong id="studentsCount">—</strong></article><article><span>إجمالي النقاط التراكمي</span><strong id="pointsCount">—</strong></article><article><span>المشرفون النشطون</span><strong id="adminsCount">—</strong></article></div>
+<details class="admin-accordion all-students-accordion"><summary>قائمة طلاب المركز<span>ترتيب تنازلي حسب إجمالي النقاط</span></summary><section class="content"><h3>الترتيب العام لجميع الطلاب</h3><p class="muted-note">القائمة تشمل جميع الطلاب، مرتبين من الأعلى نقاطًا إلى الأقل.</p><div class="table-wrap"><table class="all-students-table"><thead><tr><th>التسلسل</th><th>اسم الطالب</th><th>إجمالي النقاط</th><th>المجموعة المستهدفة</th></tr></thead><tbody id="allStudentsRanking"><tr><td colspan="4">جاري تحميل القائمة...</td></tr></tbody></table></div><p id="allStudentsMessage" class="message" aria-live="polite"></p></section></details>
 <details class="admin-accordion" open><summary>إدارة الطلاب<span>بحث · تعديل النقاط · تعديل الاسم · حذف · إضافة</span></summary><section class="content"><h3>إدارة الطلاب</h3>
 <p class="muted-note">ابحث باسم الطالب أو الكود. ستظهر أدوات التعديل أسفل نتيجة كل طالب.</p>
 <label for="studentAdminSearch">بحث باسم الطالب أو كود الطالب</label><input id="studentAdminSearch" type="search" autocomplete="off" placeholder="اكتب اسم الطالب أو الكود...">
