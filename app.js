@@ -94,8 +94,10 @@ function renderStudentProfile(data){
  const tiers=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300]];
  const tiersHtml=tiers.map(([name,points])=>'<div class="student-tier '+(total>=points?'is-reached':'')+'"><i></i><span>'+name+'</span><b>'+points+'</b></div>').join("");
  const history=Array.isArray(performance.weekly_history)?performance.weekly_history:[],neighbors=Array.isArray(performance.group_students)?performance.group_students:[];
- const previousStudent=neighbors.filter(n=>!n.is_student&&Number(n.rank)<targetRank).sort((a,b)=>Number(b.rank)-Number(a.rank))[0];
- const nextStudent=neighbors.filter(n=>!n.is_student&&Number(n.rank)>targetRank).sort((a,b)=>Number(a.rank)-Number(b.rank))[0];
+ const orderedNeighbors=[...neighbors].sort((a,b)=>Number(b.points)-Number(a.points)||(a.name<b.name?-1:a.name>b.name?1:0));
+ const myNeighborIndex=orderedNeighbors.findIndex(n=>n.is_student);
+ const previousStudent=myNeighborIndex>0?orderedNeighbors[myNeighborIndex-1]:null;
+ const nextStudent=myNeighborIndex>=0&&myNeighborIndex<orderedNeighbors.length-1?orderedNeighbors[myNeighborIndex+1]:null;
  const targetPoints=targetGroupThreshold(s.group_level),targetPercent=targetPoints?Math.min(100,Math.round(total/targetPoints*100)):null;
  const levelPercent=Math.round(progress),groupAverage=Number(performance.group_average)||0;
  const averageDifference=groupAverage?Math.round((total-groupAverage)/groupAverage*100):null;
