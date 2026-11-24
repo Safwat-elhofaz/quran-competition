@@ -614,3 +614,13 @@ button:disabled{opacity:.6;cursor:wait}
  body.printing-achievement-card .achievement-export-stage *{visibility:visible!important}
  body.printing-achievement-card .achievement-export-stage{position:static!important;left:auto!important;top:auto!important}
 }
+
+/* All-students ranking in the admin dashboard */
+.all-students-accordion .content{padding-top:18px}
+.all-students-table{width:100%;min-width:620px;border-collapse:collapse}
+.all-students-table th,.all-students-table td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line,#e8e3d7);white-space:nowrap}
+.all-students-table th{font-size:13px;color:var(--muted,#777);font-weight:800;background:rgba(181,139,59,.07)}
+.all-students-rank{font-weight:900;color:var(--gold,#b58b3b);text-align:center!important;width:76px}
+.all-students-name{font-weight:800}
+.all-students-points{font-weight:900;font-variant-numeric:tabular-nums}
+.all-students-group{display:inline-block;padding:5px 11px;border-radius:20px;background:rgba(181,139,59,.12);color:var(--gold,#a77c2e);font-size:12px;font-weight:800}
