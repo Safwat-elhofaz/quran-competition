@@ -21,6 +21,7 @@ let dashboardStudents=[];
 let dashboardRanked=[];
 let dashboardRankById=new Map();
 let selectedAdminStudentId=null;
+let adminStudentProfileOpenId=null;
 let adminStudentEntries=null;
 let adminStudentEntriesLoading=false;
 let currentAchievementData=null;
@@ -449,6 +450,17 @@ function adminMonthKey(date){
  const d=new Date(date);
  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
 }
+function renderAdminStudentQuickView(student){
+ const total=Number(dashboardRanked.find(y=>y.student_id===student.id)?.total_points||0);
+ const disabled=student.is_active?"":"disabled";
+ return "<article class='admin-student-quick-view'><div class='admin-student-summary'><div class='eyebrow'>بيانات الطالب الأساسية</div><h3>"+esc(student.full_name)+"</h3><div class='admin-student-meta'><span>الكود: "+esc(student.student_code)+"</span><span>إجمالي النقاط: "+total.toLocaleString("en-US")+"</span><span>المستوى: "+esc(level(total))+"</span><span>المجموعة المستهدفة: "+esc(student.group_level||"غير محددة")+"</span></div></div>"+
+ "<section class='admin-student-tools'><h4>إدارة بيانات الطالب</h4>"+
+ "<div class='admin-student-points-control'><label for='studentPoints-"+student.id+"'>عدد النقاط</label><input id='studentPoints-"+student.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+student.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+student.id+"' "+disabled+">إضافة نقاط</button></div></div>"+
+ "<div class='student-search-card-actions admin-profile-actions'><button type='button' class='history-btn' data-edit-student='"+student.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+student.id+"'>تعديل المجموعة</button></div>"+
+ "<form id='editStudentForm' class='stack student-editor hidden'><h4>تعديل اسم الطالب</h4><input id='editStudentId' type='hidden'><label for='editStudentName'>الاسم الجديد</label><input id='editStudentName' maxlength='150' required><div class='actions'><button class='primary'>حفظ الاسم</button><button type='button' id='cancelStudentEdit' class='secondary'>إلغاء</button></div></form>"+
+ "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
+ "<button type='button' class='primary admin-open-profile' data-open-admin-profile='"+student.id+"'>فتح ملف الطالب ←</button></section></article>";
+}
 function renderAdminStudentProfile(student){
  const totalRow=dashboardRanked.find(y=>y.student_id===student.id);
  const total=Number(totalRow?.total_points||0),currentLevel=level(total),group=student.group_level||"غير محددة";
@@ -508,22 +520,23 @@ function renderStudentManagement(){
  const normalizedQuery=normalizeStudentName(query);
  if(selectedAdminStudentId){
   const student=dashboardStudents.find(x=>x.id===selectedAdminStudentId);
-  if(!student){selectedAdminStudentId=null;adminStudentEntries=null}
+  if(!student){selectedAdminStudentId=null;adminStudentProfileOpenId=null;adminStudentEntries=null}
   else{
-   if(adminStudentEntriesLoading){$("studentManagementResults").innerHTML="<p class='muted-note'>جاري تحميل سجل أداء الطالب...</p>";return}
-   $("studentManagementResults").innerHTML=renderAdminStudentProfile(student);return;
+   if(adminStudentProfileOpenId===student.id){
+    if(adminStudentEntriesLoading){$("studentManagementResults").innerHTML="<p class='muted-note'>جاري تحميل سجل أداء الطالب...</p>";return}
+    $("studentManagementResults").innerHTML=renderAdminStudentProfile(student);return;
+   }
+   $("studentManagementResults").innerHTML=renderAdminStudentQuickView(student);return;
   }
  }
  if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث، ولو الاسم غير مسجل هيظهر لك خيار إضافته.</p>';return}
  const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(normalizedQuery)||x.student_code.includes(query)).slice(0,30);
  const exactNameExists=dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalizedQuery);
  const looksLikeCode=/^[0-9٠-٩۰-۹]+$/.test(query);
- const addForm=!exactNameExists&&!looksLikeCode
-  ? "<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>الاسم الذي كتبته غير مسجل كاسم مطابق. اختر المجموعة ثم اضغط إضافة الطالب؛ سيتم توليد كود فريد من خمسة أرقام تلقائيًا.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(query)+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>"
-  : "";
+ const addForm="<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>اكتب اسم الطالب واختر المجموعة؛ سيتم توليد كود فريد من خمسة أرقام تلقائيًا.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(!exactNameExists&&!looksLikeCode?query:"")+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>";
  const results=rows.length?rows.map(x=>{
   const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
-  return "<article class='student-search-card'><div class='student-search-card-info'><button type='button' class='admin-student-name-link' data-open-admin-student='"+x.id+"'>"+esc(x.full_name)+"</button><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><button type='button' class='secondary admin-open-profile' data-open-admin-student='"+x.id+"'>فتح ملف الطالب ←</button></article>"
+  return "<article class='student-search-card'><div class='student-search-card-info'><button type='button' class='admin-student-name-link' data-select-admin-student='"+x.id+"'>"+esc(x.full_name)+"</button><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><button type='button' class='secondary admin-select-profile' data-select-admin-student='"+x.id+"'>عرض بيانات الطالب</button></article>"
  }).join(""):'<p class="muted-note">لا توجد نتائج مطابقة لعملية البحث.</p>';
  $("studentManagementResults").innerHTML=results+addForm;
 }
@@ -541,12 +554,14 @@ async function loadAdminStudentProfile(id){
   if(selectedAdminStudentId===id)renderStudentManagement();
  }
 }
-$("studentAdminSearch").oninput=()=>{selectedAdminStudentId=null;adminStudentEntries=null;adminStudentEntriesLoading=false;renderStudentManagement()};
+$("studentAdminSearch").oninput=()=>{selectedAdminStudentId=null;adminStudentProfileOpenId=null;adminStudentEntries=null;adminStudentEntriesLoading=false;renderStudentManagement()};
 $("studentManagementResults").onclick=async e=>{
- const openProfile=e.target.closest("[data-open-admin-student]");
- if(openProfile){const id=openProfile.dataset.openAdminStudent;selectedAdminStudentId=id;await loadAdminStudentProfile(id);return}
+ const selectStudent=e.target.closest("[data-select-admin-student]");
+ if(selectStudent){selectedAdminStudentId=selectStudent.dataset.selectAdminStudent;adminStudentProfileOpenId=null;adminStudentEntries=null;adminStudentEntriesLoading=false;renderStudentManagement();return}
+ const openProfile=e.target.closest("[data-open-admin-profile]");
+ if(openProfile){const id=openProfile.dataset.openAdminProfile;selectedAdminStudentId=id;adminStudentProfileOpenId=id;await loadAdminStudentProfile(id);return}
  const backProfile=e.target.closest("[data-back-admin-student]");
- if(backProfile){selectedAdminStudentId=null;adminStudentEntries=null;renderStudentManagement();return}
+ if(backProfile){selectedAdminStudentId=null;adminStudentProfileOpenId=null;adminStudentEntries=null;renderStudentManagement();return}
 
  const edit=e.target.closest("[data-edit-student]");
  if(edit){const x=dashboardStudents.find(v=>v.id===edit.dataset.editStudent);if(!x)return;$("editStudentId").value=x.id;$("editStudentName").value=x.full_name;$("editStudentForm").classList.remove("hidden");$("editStudentForm").scrollIntoView({behavior:"smooth",block:"center"});return}
