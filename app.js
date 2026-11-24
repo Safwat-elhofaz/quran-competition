@@ -563,8 +563,11 @@ async function showPeriodResults(type,id){
     const archived=await db.from("challenge_result_snapshots").select("student_id,student_name,total_points,rank").eq("period_type",type).eq("period_id",id).order("rank",{ascending:true});
     if(archived.error)throw archived.error;
     let rows=(archived.data||[]).map(x=>({student_id:x.student_id,full_name:x.student_name,total_points:x.total_points,rank:x.rank}));
-    if(!rows.length){const live=await db.from(view).select("student_id,full_name,total_points").eq(column,id);if(live.error)throw live.error;rows=(live.data||[]).sort((a,b)=>b.total_points-a.total_points||a.full_name.localeCompare(b.full_name,"ar"));}
-    else rows.sort((a,b)=>a.rank-b.rank||a.full_name.localeCompare(b.full_name,"ar"));
+    if(!rows.length){
+      const period=monthly?await db.from("competitions").select("status").eq("id",id).maybeSingle():await db.from("weekly_challenges").select("status").eq("id",id).maybeSingle();
+      if(period.error)throw period.error;
+      if(period.data?.status!=="archived"){const live=await db.from(view).select("student_id,full_name,total_points").eq(column,id);if(live.error)throw live.error;rows=(live.data||[]).sort((a,b)=>b.total_points-a.total_points||a.full_name.localeCompare(b.full_name,"ar"));}
+    }else rows.sort((a,b)=>a.rank-b.rank||a.full_name.localeCompare(b.full_name,"ar"));
     $("challengeResultsTitle").textContent=monthly?"نتائج التحدي الشهري":"نتائج التحدي الأسبوعي";
     let lastPoints=null,lastRank=0;
     $("challengeResultsTable").innerHTML=rows.length?rows.map((x,i)=>{if(x.rank)lastRank=x.rank;else if(i===0||x.total_points!==lastPoints)lastRank=i+1;lastPoints=x.total_points;return "<tr><td>"+lastRank+"</td><td>"+esc(x.full_name)+"</td><td>"+x.total_points+"</td></tr>"}).join(""):'<tr><td colspan="3">لا توجد نقاط مسجلة لهذا التحدي</td></tr>';
