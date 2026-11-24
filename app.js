@@ -529,7 +529,7 @@ function renderPeriodControls(monthly,weekly){
 }
 async function loadHistory(monthly){
   const [w,c]=await Promise.all([
-    db.from("weekly_challenges").select("id,competition_id,week_number,title,week_start,week_end,status").order("created_at",{ascending:false}).limit(40),
+    db.from("weekly_challenges").select("id,competition_id,week_number,title,week_start,week_end,status").order("created_at",{ascending:false}).limit(200),
     db.from("competitions").select("id,title,month_start,month_end,status").order("created_at",{ascending:false}).limit(20)
   ]);
   if(w.error)throw w.error;if(c.error)throw c.error;
