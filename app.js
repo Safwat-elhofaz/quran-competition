@@ -798,7 +798,7 @@ function renderAchievementAwardAdminStudent(student){
  const monthContent=achievementAdminError?'<p class="message">'+esc("تعذر تحميل سجل الأوسمة: "+achievementAdminError)+'</p>':monthHtml;
  const adminMap=new Map(dashboardAdminProfiles.map(a=>[a.user_id,a.display_name]));
  const auditHtml=achievementAdminAudit.map(log=>{
-  const d=log.details||{},label=log.action==="REVOKE"?"إلغاء وسام":log.action==="REACTIVATE"?"استعادة وسام":log.action;
+  const d=log.details||{},label=log.action==="REVOKE"?"إلغاء وسام":log.action==="REACTIVATE"?"استعادة وسام":log.action==="AWARD_GRANTED_AFTER_REAPPROVAL"?"منح وسام بعد تصحيح التحدي":log.action;
   return '<div class="achievement-award-audit-item"><b>'+esc(label)+'</b> · '+new Date(log.created_at).toLocaleString("ar-EG")+' · '+esc(adminMap.get(log.admin_user_id)||"مشرف")+'<br>'+esc(d.medal_tier||"")+' · '+esc(d.competition_title||"")+'<br>السبب: '+esc(d.reason||"—")+'</div>';
  }).join("")||'<p class="muted-note">لا توجد عمليات إلغاء أو استعادة لهذا الطالب.</p>';
  host.innerHTML='<div class="achievement-award-admin-head"><h4>'+esc(student.full_name)+'</h4><div class="achievement-award-admin-meta"><span>كود الطالب: '+esc(student.student_code)+'</span><span>النقاط: '+total.toLocaleString("en-US")+'</span><span>المستوى: '+esc(level(total))+'</span><span>المجموعة المستهدفة: '+esc(student.group_level||"غير محددة")+'</span></div></div>'+monthContent+'<section class="achievement-award-audit"><h4>سجل عمليات الأوسمة</h4>'+auditHtml+'</section><p id="achievementAwardAdminMessage" class="message" aria-live="polite"></p>';
