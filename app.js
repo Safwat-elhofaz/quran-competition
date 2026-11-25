@@ -489,7 +489,7 @@ async function routeAdmin(user){
   pendingAdmin={id:user.id,profile:a.data};
   $("adminWelcome").textContent="أهلًا "+a.data.display_name;
   if(a.data.must_change_password) show("changePasswordView");
-  else {show("adminView");await loadDashboard()}
+  else {show("adminView");await loadDashboard();const studentSearch=$("studentAdminSearch");if(studentSearch){studentSearch.focus({preventScroll:true});studentSearch.select()}}
 }
 $("loginForm").onsubmit=async e=>{
   e.preventDefault();
