@@ -149,7 +149,7 @@ function attachStudentAwards(data){
   history.scrollIntoView({behavior:"smooth",block:"start"});
  };
  $("studentBackToCurrentAwards").onclick=()=>{
-  history.classList.add("hidden");greeting.classList.remove("hidden");if(newAwards.length)notice.classList.remove("hidden");current.classList.remove("hidden");
+  history.classList.add("hidden");greeting.classList.remove("hidden");if(newAwards.length&&!acknowledgementStarted)notice.classList.remove("hidden");current.classList.remove("hidden");
   current.scrollIntoView({behavior:"smooth",block:"start"});
  };
  if(newAwards.length&&"IntersectionObserver" in window){
