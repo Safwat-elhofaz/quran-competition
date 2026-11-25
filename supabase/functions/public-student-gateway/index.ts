@@ -42,9 +42,23 @@ Deno.serve(async (req: Request) => {
       req.headers.get("x-forwarded-for")?.split(",")[0] || "").trim();
     if (!ip || ip.length > 128) return response({ error: "تعذر التحقق من مصدر الاتصال. حاول مرة أخرى." }, 503);
 
+    // Use the opaque secret key only as the apikey. Do not send it as a
+    // Bearer token: PostgREST must let the API gateway exchange it for the
+    // internal service_role JWT. A separate client preserves user-JWT checks.
     const client = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { "x-forwarded-for": ip, "Authorization": "Bearer " + serviceRoleKey } },
+      global: {
+        headers: { "x-forwarded-for": ip },
+        fetch: (input, init) => {
+          const headers = new Headers(input instanceof Request ? input.headers : undefined);
+          new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
+          headers.delete("Authorization");
+          return fetch(input, { ...init, headers });
+        },
+      },
+    });
+    const userAuthClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
 
     // An active administrator keeps the existing unrestricted administrative workflow.
@@ -52,7 +66,7 @@ Deno.serve(async (req: Request) => {
     const authorization = req.headers.get("authorization") || "";
     const token = authorization.replace(/^Bearer\s+/i, "").trim();
     if (token) {
-      const { data: authData } = await client.auth.getUser(token);
+      const { data: authData } = await userAuthClient.auth.getUser(token);
       if (authData.user) {
         const { data: adminProfile } = await client.from("admin_profiles")
           .select("is_active").eq("user_id", authData.user.id).maybeSingle();
