@@ -130,9 +130,18 @@ function attachStudentAwards(data){
  history.className="student-all-awards-view hidden";
  history.id="studentAllAwardsView";
  history.innerHTML='<div class="student-awards-heading"><h3>سجل أوسمة الإنجاز</h3><button type="button" class="secondary" id="studentBackToCurrentAwards">العودة لصفحة الطالب</button></div>'+renderStudentAwardHistory(allAwards);
- const footer=report.querySelector(".student-report-footer");
- if(footer)footer.before(greeting,notice,current,history);else report.append(greeting,notice,current,history);
+ const cover=report.querySelector(".student-report-cover");
+ if(cover)cover.after(notice,greeting,current,history);else report.prepend(notice,greeting,current,history);
+ let acknowledgementStarted=false;
+ const acknowledgeNewAwards=()=>{
+  if(acknowledgementStarted||!newAwards.length)return;
+  acknowledgementStarted=true;
+  publicGateway("acknowledge_awards",{p_student_code:student.student_code,p_award_ids:newAwards.map(a=>a.id)})
+   .then(result=>{if(result.error)console.warn("تعذر تسجيل مشاهدة تهنئة الأوسمة:",result.error)})
+   .catch(error=>console.warn("تعذر تسجيل مشاهدة تهنئة الأوسمة:",error));
+ };
  $("studentShowAllAwards").onclick=()=>{
+  acknowledgeNewAwards();
   greeting.classList.add("hidden");notice.classList.add("hidden");current.classList.add("hidden");history.classList.remove("hidden");
   history.scrollIntoView({behavior:"smooth",block:"start"});
  };
@@ -140,9 +149,15 @@ function attachStudentAwards(data){
   history.classList.add("hidden");greeting.classList.remove("hidden");if(newAwards.length)notice.classList.remove("hidden");current.classList.remove("hidden");
   current.scrollIntoView({behavior:"smooth",block:"start"});
  };
- if(newAwards.length){
-  publicGateway("acknowledge_awards",{p_student_code:student.student_code,p_award_ids:newAwards.map(a=>a.id)})
-   .catch(error=>console.warn("تعذر تسجيل مشاهدة تهنئة الأوسمة:",error));
+ if(newAwards.length&&"IntersectionObserver" in window){
+  const observer=new IntersectionObserver(entries=>{
+   if(document.visibilityState==="visible"&&entries.some(entry=>entry.isIntersecting&&entry.intersectionRatio>=0.5)){
+    observer.disconnect();acknowledgeNewAwards();
+   }
+  },{threshold:0.5});
+  observer.observe(notice);
+ }else if(newAwards.length){
+  notice.addEventListener("click",acknowledgeNewAwards,{once:true});
  }
 }
 function rankLabel(rank,repeated=false){return String(rank)+(repeated?" مكرر":"")}
