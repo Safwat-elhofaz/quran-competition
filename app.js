@@ -218,7 +218,7 @@ async function createAchievementExportStage(studentDataOverride,studentCodeOverr
 async function printStudentAchievementCard(studentDataOverride,studentCodeOverride,statusElement){
  let stage;
  const status=statusElement||$("studentExportMessage");
- try{stage=await createAchievementExportStage(studentDataOverride,studentCodeOverride)}catch(e){if(status)status.textContent=e.message||"تعذر تجهيز كارت الإنجاز";throw e}
+ try{stage=await createAchievementExportStage(studentDataOverride,studentCodeOverride)}catch(e){if(status)status.textContent=e.message||"تعذر تجهيز كارت الإنجاز";return null}
  document.body.classList.add("printing-achievement-card");
  const cleanup=()=>{document.body.classList.remove("printing-achievement-card");stage.holder.remove()};
  window.addEventListener("afterprint",cleanup,{once:true});
@@ -237,8 +237,9 @@ async function exportAdminStudentAchievementCard(studentId,mode,button){
  try{
   stage=await createAchievementExportStage(null,student.student_code);
   if(mode==="pdf"){
+   const printStage=stage;
    document.body.classList.add("printing-achievement-card");
-   const cleanup=()=>{document.body.classList.remove("printing-achievement-card");stage?.holder.remove()};
+   const cleanup=()=>{document.body.classList.remove("printing-achievement-card");printStage.holder.remove()};
    window.addEventListener("afterprint",cleanup,{once:true});
    window.print();
    setTimeout(cleanup,2500);
@@ -252,7 +253,7 @@ async function exportAdminStudentAchievementCard(studentId,mode,button){
    if(!blob)throw Error("تعذر إنشاء ملف الصورة");
    const url=URL.createObjectURL(blob),a=document.createElement("a");
    const studentName=stage.cardData?.snapshot?.student?.full_name||student.full_name||"الطالب";
-   a.href=url;a.download="كارت-إنجاز-صفوة-الحفاظ-"+studentName.replace(/[^\\u0600-\\u06FF\\w-]+/g,"-")+".png";
+   a.href=url;a.download="كارت-إنجاز-صفوة-الحفاظ-"+studentName.replace(/[^\u0600-\u06FF\w-]+/g,"-")+".png";
    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
    msg("studentManagementMessage","تم تنزيل صورة كارت إنجاز "+student.full_name+" بنجاح.");
   }
@@ -500,7 +501,7 @@ function renderAdminStudentQuickView(student){
  "<div class='student-search-card-actions admin-profile-actions'><button type='button' class='history-btn' data-edit-student='"+student.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+student.id+"'>تعديل المجموعة</button></div>"+
  "<form id='editStudentForm' class='stack student-editor hidden'><h4>تعديل اسم الطالب</h4><input id='editStudentId' type='hidden'><label for='editStudentName'>الاسم الجديد</label><input id='editStudentName' maxlength='150' required><div class='actions'><button class='primary'>حفظ الاسم</button><button type='button' id='cancelStudentEdit' class='secondary'>إلغاء</button></div></form>"+
  "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
- "<div class='admin-achievement-actions'><button type='button' class='history-btn' data-admin-card-image='"+student.id+"' "+disabled+">🖼️ تنزيل صورة الكارت</button><button type='button' class='history-btn' data-admin-card-pdf='"+student.id+"' "+disabled+">🖨️ طباعة / حفظ PDF</button></div>"+
+ "<div class='admin-achievement-actions'><button type='button' class='history-btn' data-admin-card-image='"+student.id+"'>🖼️ تنزيل صورة الكارت</button><button type='button' class='history-btn' data-admin-card-pdf='"+student.id+"'>🖨️ طباعة / حفظ PDF</button></div>"+
  "<button type='button' class='primary admin-open-profile' data-open-admin-profile='"+student.id+"'>فتح ملف الطالب ←</button></section></article>";
 }
 function renderAdminStudentProfile(student){
