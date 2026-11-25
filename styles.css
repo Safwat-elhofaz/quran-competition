@@ -847,3 +847,9 @@ button:disabled{opacity:.6;cursor:wait}
  .achievement-award-search-result{align-items:flex-start;flex-direction:column}
  .achievement-award-month-admin-head{align-items:flex-start}
 }
+
+.monthly-awards-reapproval{margin-top:16px;padding:15px;border:1px solid #d3b66c;border-radius:14px;background:linear-gradient(135deg,#fff8e6,#edf4ef)}
+.monthly-awards-reapproval p{margin:0 0 12px;color:var(--green-deep);font-size:12px;line-height:1.9}
+.monthly-awards-reapproval button{max-width:100%}
+.dark .monthly-awards-reapproval{background:linear-gradient(135deg,#352f1d,#20392d);border-color:#9c7a39}
+.dark .monthly-awards-reapproval p{color:#eee2c2}
