@@ -969,12 +969,13 @@ async function previewMonthlyAwards(){
   });
   const levelGroups=new Map();
   rows.forEach(x=>{
-   const lp=life.get(x.student_id)||0,lr=currentLevelOrder(lp),tr=targetGroupOrder(x.student.group_level);
-   if(lr>0&&lr>tr){if(!levelGroups.has(lr))levelGroups.set(lr,[]);levelGroups.get(lr).push({...x,lifetimePoints:lp,levelRank:lr})}
+   const lp=life.get(x.student_id)||0,lr=currentLevelOrder(lp);
+   if(lr>0){if(!levelGroups.has(lr))levelGroups.set(lr,[]);levelGroups.get(lr).push({...x,lifetimePoints:lp,levelRank:lr})}
   });
   levelGroups.forEach(groupRows=>{
    const top=Math.max(...groupRows.map(x=>x.lifetimePoints));
-   groupRows.filter(x=>x.lifetimePoints===top).forEach(x=>preview.push({student:x,rank:1,key:"higher_group_leader",tier:"وسام التميز",points:x.lifetimePoints}));
+   groupRows.filter(x=>x.lifetimePoints===top&&x.levelRank>targetGroupOrder(x.student.group_level))
+    .forEach(x=>preview.push({student:x,rank:1,key:"higher_group_leader",tier:"وسام التميز",points:x.lifetimePoints}));
   });
   (existingResult.data||[]).filter(a=>a.achievement_key==="target_reached"||a.achievement_key==="target_exceeded").forEach(a=>{
    const student=students.get(a.student_id);if(student)preview.push({student:{...student,full_name:a.student_name,student_code:a.student_code},rank:null,key:a.achievement_key,tier:a.medal_tier,points:a.points_at_award});
