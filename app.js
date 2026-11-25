@@ -2,7 +2,10 @@ const SUPABASE_URL="https://rjbiahkjfmhexexssczg.supabase.co";
 const SUPABASE_KEY="sb_publishable_4_pS_PYlIamm6eXOWzGmTg_IY0mN-oR";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 async function publicGateway(action,payload){
- const response=await fetch(SUPABASE_URL+"/functions/v1/public-student-gateway",{method:"POST",headers:{"apikey":SUPABASE_KEY,"Content-Type":"application/json"},body:JSON.stringify({action,...payload})});
+ const {data:sessionData}=await db.auth.getSession();
+ const headers={"apikey":SUPABASE_KEY,"Content-Type":"application/json"};
+ if(sessionData?.session?.access_token)headers.Authorization="Bearer "+sessionData.session.access_token;
+ const response=await fetch(SUPABASE_URL+"/functions/v1/public-student-gateway",{method:"POST",headers,body:JSON.stringify({action,...payload})});
  let body={};try{body=await response.json()}catch(e){}
  return {data:body.data??null,error:response.ok?null:new Error(body.error||"تعذر تنفيذ الطلب حاليًا.")};
 }
