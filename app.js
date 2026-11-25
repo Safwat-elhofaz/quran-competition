@@ -111,7 +111,8 @@ function attachStudentAwards(data){
  const report=$("studentReport");
  if(!report)return;
  const student=data.student||{};
- const currentAwards=Array.isArray(data.achievement_awards)?data.achievement_awards:[];
+ const awardOrder={"وسام التاج":1,"وسام النخبة":2,"وسام الريادة":3,"وسام التميز":4,"وسام التفوق":5,"وسام التقدير":6,"وسام الاستحقاق":7};
+ const currentAwards=Array.isArray(data.achievement_awards)?[...data.achievement_awards].sort((a,b)=>(awardOrder[a.medal_tier]||99)-(awardOrder[b.medal_tier]||99)):[];
  const allAwards=Array.isArray(data.all_achievement_awards)?data.all_achievement_awards:[];
  const newAwards=Array.isArray(data.new_achievement_awards)?data.new_achievement_awards:[];
  const greeting=document.createElement("section");
