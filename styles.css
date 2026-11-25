@@ -723,3 +723,30 @@ button:disabled{opacity:.6;cursor:wait}
 .admin-achievement-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .admin-achievement-actions button{width:100%;min-width:0;white-space:normal;line-height:1.5}
 @media(max-width:560px){.admin-achievement-actions{grid-template-columns:1fr 1fr;gap:7px}.admin-achievement-actions button{padding:10px 7px;font-size:11px}}
+
+/* Student journey and achievement-card history */
+.leaderboard-updated-at{margin:5px 0 0!important;font-size:12px;color:var(--gold)!important;font-weight:700}
+.student-journey-timeline{position:relative;display:grid;gap:0;padding:4px 22px 4px 0}
+.student-journey-timeline:before{content:"";position:absolute;right:7px;top:12px;bottom:12px;width:2px;background:var(--line)}
+.student-journey-event{position:relative;display:flex;gap:12px;padding:10px 0}
+.student-journey-event>i{position:absolute;right:-20px;top:17px;width:12px;height:12px;border:2px solid var(--green);border-radius:50%;background:var(--surface);z-index:1}
+.student-journey-event.is-milestone>i{border-color:var(--gold);background:#f5e8c5}
+.student-journey-event.is-deduction>i{border-color:#c66b5c}
+.student-journey-event>div{min-width:0;flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.student-journey-event.is-milestone>div{border-color:#ddc98d;background:#fcf8ec}
+.student-journey-event b{display:block;color:var(--deep);font-size:14px}
+.student-journey-event p{margin:3px 0;color:var(--muted);font-size:12px}
+.student-journey-event small{color:var(--muted);font-size:11px}
+.achievement-history-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.achievement-history-item{padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--surface);display:grid;gap:7px}
+.achievement-history-main{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.achievement-history-main>b{color:var(--deep)}
+.achievement-history-main>strong{font-size:13px;letter-spacing:1px}
+.achievement-history-status{font-size:11px;font-weight:800;padding:3px 8px;border-radius:20px}
+.achievement-history-status.is-active{color:#176344;background:#e4f2e9}
+.achievement-history-status.is-revoked{color:#a34c42;background:#f8e9e6}
+.achievement-history-item small{color:var(--muted);font-size:11px}
+.achievement-history-item p{margin:0;color:#a34c42;font-size:12px}
+.dark .student-journey-event>div,.dark .achievement-history-item{background:#192a22}
+.dark .student-journey-event.is-milestone>div{background:#332e1e}
+@media(max-width:600px){.achievement-history-list{grid-template-columns:1fr}.student-journey-event>div{padding:8px 10px}}
