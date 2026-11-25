@@ -286,8 +286,12 @@ function renderStudentProfile(data){
  const chartMax=Math.max(1,...history.flatMap(w=>[Number(w.points)||0,Number(w.group_average)||0]));
  const weeklyChartHtml=history.length?'<div class="student-weekly-chart">'+history.map(w=>'<div class="student-week-column"><div class="student-week-bars"><i class="student-own-bar" style="height:'+Math.max(3,(Number(w.points)||0)/chartMax*100)+'%"></i><i class="student-average-bar" style="height:'+Math.max(3,(Number(w.group_average)||0)/chartMax*100)+'%"></i></div><b>أسبوع '+Number(w.week_number)+'</b><small>'+(Number(w.points)||0)+' نقطة</small></div>').join("")+'</div><div class="student-chart-legend"><span><i class="student-own-key"></i> نقاطك</span><span><i class="student-average-key"></i> متوسط المجموعة</span></div>':'<p class="muted-note">لا توجد بيانات أسابيع مسجلة في المسابقة الحالية بعد.</p>';
  const ownVsAverage=Math.max(0,Number(performance.group_average)||0,total,1),groupOwnWidth=Math.min(100,total/ownVsAverage*100),groupAverageWidth=Math.min(100,(Number(performance.group_average)||0)/ownVsAverage*100);
+ const groupTopPoints=performance.group_top_points==null?null:Number(performance.group_top_points);
+ const leaderGap=groupTopPoints===null?null:Math.max(0,groupTopPoints-total);
+ const leaderGapTitle=!s.group_level?"لم تُحدد مجموعة":leaderGap===null?"غير متاح":leaderGap===0?"أنت في الصدارة": "فاضلك "+leaderGap.toLocaleString("en-US")+" نقطة";
+ const leaderGapDetail=!s.group_level?"لا توجد مجموعة للمقارنة":leaderGap===null?"تعذر تحميل نقاط الأول في المجموعة":leaderGap===0?"نقاطك تساوي أعلى رصيد في المجموعة":"عن صاحب المركز الأول في مجموعتك";
  const neighborRows=[{label:"الطالب السابق",student:previousStudent},{label:"الطالب التالي",student:nextStudent}];
- const neighborHtml='<div class="student-nearby-pair">'+neighborRows.map(item=>item.student?'<article><small>'+item.label+'</small><b>'+esc(item.student.name)+'</b><span>المركز '+Number(item.student.rank)+' · '+Number(item.student.points).toLocaleString("en-US")+' نقطة</span></article>':'<article class="is-empty"><small>'+item.label+'</small><b>'+(item.label==="الطالب السابق"?"أنت في أول الترتيب":"أنت في آخر الترتيب")+'</b><span>لا يوجد طالب آخر في هذا الاتجاه</span></article>').join("")+'</div>';
+ const neighborHtml='<div class="student-nearby-pair">'+neighborRows.map(item=>item.student?'<article><small>'+item.label+'</small><b>'+esc(item.student.name)+'</b><span>المركز '+Number(item.student.rank)+' · '+Number(item.student.points).toLocaleString("en-US")+' نقطة</span></article>':'<article class="is-empty"><small>'+item.label+'</small><b>'+(item.label==="الطالب السابق"?"أنت في أول الترتيب":"أنت في آخر الترتيب")+'</b><span>لا يوجد طالب آخر في هذا الاتجاه</span></article>').join("")+'<article class="student-leader-gap"><small>الفارق عن الأول</small><b>'+esc(leaderGapTitle)+'</b><span>'+esc(leaderGapDetail)+'</span></article></div>';
 
  $("studentProfile").innerHTML=`
   <div class="student-report" id="studentReport">
@@ -309,9 +313,6 @@ function renderStudentProfile(data){
    <section class="student-progress-card student-performance-card"><h3>أداؤك أسبوعًا بعد أسبوع</h3><p class="student-chart-note">مقارنة نقاطك بمتوسط نقاط مجموعتك في كل أسبوع من المسابقة</p>${weeklyChartHtml}</section>
    <section class="student-progress-card student-group-performance"><h3>معدلات أدائك في مجموعتك</h3><div class="student-group-kpis"><div><strong>${Number(performance.group_rank)||"—"}</strong><span>ترتيبك في المجموعة</span></div><div><strong>${Number(performance.group_size)||0}</strong><span>عدد طلاب المجموعة</span></div><div><strong>${Number(performance.group_average)||0}</strong><span>متوسط نقاط المجموعة</span></div></div><div class="student-compare-row"><span>نقاطك</span><div class="student-compare-track"><i style="width:${groupOwnWidth}%"></i></div><b>${total}</b></div><div class="student-compare-row average"><span>المتوسط</span><div class="student-compare-track"><i style="width:${groupAverageWidth}%"></i></div><b>${Number(performance.group_average)||0}</b></div><p class="student-chart-note">${total>Number(performance.group_average||0)?"أنت أعلى من متوسط مجموعتك بـ "+(total-Number(performance.group_average||0))+" نقطة.":total<Number(performance.group_average||0)?"متبقي لك "+(Number(performance.group_average||0)-total)+" نقطة لتصل إلى متوسط مجموعتك.":"أنت عند متوسط مجموعتك تمامًا."}</p></section>
    <section class="student-progress-card student-nearby-card"><h3>الطالبان المجاوران لترتيبك</h3><p class="student-chart-note">اسم الطالب السابق والطالب التالي لك مباشرة في ترتيب المجموعة</p>${neighborHtml}</section>
-   <section class="student-progress-card student-rankings"><h3>الترتيب العام للطلاب</h3><div class="student-ranking-grid">
-    <div><h4>أفضل الطلاب إجمالًا</h4><ol id="studentOverallTop"><li>جاري تحميل الترتيب...</li></ol></div>
-   </div></section>
    <div class="student-report-footer"><span>أثرٌ يبقى</span><i>۞</i><span>نورٌ لا ينطفئ</span><small>هذا التقرير يعرض بيانات الطالب وقت الاستعلام</small></div>
   </div>
   <div class="student-profile-actions"><button type="button" class="secondary" id="studentPrintBtn">🖨️ طباعة / حفظ PDF</button><button type="button" class="secondary" id="studentImageBtn">🖼️ حفظ التقرير صورة</button><button type="button" class="primary" id="studentLookupAgain">استعلام بكود آخر</button></div><p id="studentExportMessage" class="message" aria-live="polite"></p>`;
@@ -319,15 +320,6 @@ function renderStudentProfile(data){
  $("studentPrintBtn").onclick=printStudentAchievementCard;
  $("studentImageBtn").onclick=saveStudentReportImage;
  currentAchievementData=data;
- loadStudentReportRankings(s);
-}
-async function loadStudentReportRankings(student){
- try{
-  const {data,error}=await db.rpc("public_leaderboards");if(error)throw error;
-  const overall=(data?.overall||[]).slice(0,10);
-  const render=rows=>{let previousPoints=null,currentRank=0;return rows.length?rows.map((x,i)=>{const points=Number(x.points)||0,repeated=i>0&&points===previousPoints;if(!repeated)currentRank++;previousPoints=points;return '<li class="'+(x.name===student.full_name?'is-me':'')+'"><span>'+rankLabel(currentRank,repeated)+'</span><b>'+esc(x.name)+(x.name===student.full_name?' (أنت)':'')+'</b><strong>'+points.toLocaleString("en-US")+'</strong></li>'}).join(""):'<li>لا توجد بيانات متاحة حاليًا.</li>'};
-  $("studentOverallTop").innerHTML=render(overall);
- }catch(e){$("studentOverallTop").innerHTML="<li>تعذر تحميل الترتيب حاليًا.</li>";}
 }
 async function saveStudentReportImage(){
  const btn=$("studentImageBtn"),status=$("studentExportMessage");
