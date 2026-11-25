@@ -954,29 +954,50 @@ function currentLevelOrder(points){
  const value=Number(points)||0;
  return value>=300?6:value>=250?5:value>=200?4:value>=150?3:value>=100?2:value>=75?1:0;
 }
-async function previewMonthlyAwards(){
+async function previewMonthlyAwards(competitionId=null){
  const panel=$("monthlyAwardsPreview");
+ const parent=panel.closest("details");if(parent)parent.open=true;
  panel.classList.remove("hidden");
- panel.innerHTML='<p class="muted-note">جاري تجهيز معاينة الأوسمة من بيانات التحدي الحالية...</p>';
+ panel.innerHTML='<p class="muted-note">جاري تجهيز معاينة الأوسمة من بيانات التحدي...</p>';
+ panel.scrollIntoView({behavior:"smooth",block:"start"});
  try{
-  const competition=await activeMonthly();
-  if(!competition)throw Error("لا يوجد تحدٍ شهري نشط لمعاينة أوسمته.");
+  let competition;
+  if(competitionId){
+   const selected=await db.from("competitions").select("id,title,month_start,month_end,status,awards_finalized_at,awards_revision_pending").eq("id",competitionId).maybeSingle();
+   if(selected.error)throw selected.error;competition=selected.data;
+  }else{
+   const active=await activeMonthly();
+   if(!active)throw Error("لا يوجد تحدٍ شهري نشط لمعاينة أوسمته.");
+   const selected=await db.from("competitions").select("id,title,month_start,month_end,status,awards_finalized_at,awards_revision_pending").eq("id",active.id).maybeSingle();
+   if(selected.error)throw selected.error;competition=selected.data;
+  }
+  if(!competition)throw Error("لم يتم العثور على بيانات التحدي المحدد.");
   const [monthlyResult,studentsResult,lifetimeResult,existingResult]=await Promise.all([
    db.from("student_monthly_totals").select("student_id,full_name,student_code,is_active,total_points").eq("competition_id",competition.id),
    db.from("students").select("id,group_level,full_name,student_code,is_active").eq("is_active",true),
    db.from("student_lifetime_totals").select("student_id,total_points").eq("is_active",true),
-   db.from("achievement_awards").select("student_id,student_name,student_code,achievement_key,medal_tier,target_group_at_award,points_at_award").eq("competition_id",competition.id).eq("status","active")
+   db.from("achievement_awards").select("student_id,student_name,student_code,achievement_key,medal_tier,target_group_at_award,points_at_award,status,rank_at_award").eq("competition_id",competition.id)
   ]);
   if(monthlyResult.error)throw monthlyResult.error;if(studentsResult.error)throw studentsResult.error;if(lifetimeResult.error)throw lifetimeResult.error;if(existingResult.error)throw existingResult.error;
   const students=new Map((studentsResult.data||[]).map(s=>[s.id,s]));
   const life=new Map((lifetimeResult.data||[]).map(s=>[s.student_id,Number(s.total_points)||0]));
+  const existingAwards=existingResult.data||[];
+  const isGoalKey=key=>key==="target_reached"||key==="target_exceeded";
+  const keyOf=(studentId,key,target)=>studentId+"|"+key+"|"+(isGoalKey(key)?(target||""):"");
+  const existingMap=new Map(existingAwards.map(a=>[keyOf(a.student_id,a.achievement_key,a.target_group_at_award),a]));
+  const preview=[],previewKeys=new Set();
+  const addPreview=x=>{
+   const key=keyOf(x.student.id,x.key,x.target_group_at_award);
+   const old=existingMap.get(key);
+   if(old)x.existingStatus=old.status;
+   preview.push(x);previewKeys.add(key);
+  };
   const rows=(monthlyResult.data||[]).filter(x=>x.is_active&&Number(x.total_points)>0&&students.has(x.student_id)).map(x=>({...x,student:students.get(x.student_id)}));
-  const preview=[];
   const overall=[...rows].sort((a,b)=>Number(b.total_points)-Number(a.total_points));
   let rank=0,previous=null;
   overall.forEach((x,i)=>{
    const points=Number(x.total_points)||0;if(i===0||points!==previous)rank++;previous=points;
-   if(rank<=10)preview.push({student:x,rank,key:rank===1?"overall_first":rank<=3?"overall_2_3":"overall_4_10",tier:rank===1?"وسام التاج":rank<=3?"وسام النخبة":"وسام الريادة",points});
+   if(rank<=10)addPreview({student:x.student,rank,key:rank===1?"overall_first":rank<=3?"overall_2_3":"overall_4_10",tier:rank===1?"وسام التاج":rank<=3?"وسام النخبة":"وسام الريادة",points,target_group_at_award:x.student.group_level});
   });
   const byTarget=new Map();
   rows.forEach(x=>{const group=x.student.group_level;if(!group)return;if(!byTarget.has(group))byTarget.set(group,[]);byTarget.get(group).push(x)});
@@ -984,7 +1005,7 @@ async function previewMonthlyAwards(){
    groupRows.sort((a,b)=>Number(b.total_points)-Number(a.total_points));
    if(!groupRows.length)return;
    const top=Number(groupRows[0].total_points)||0;
-   groupRows.filter(x=>(Number(x.total_points)||0)===top).forEach(x=>preview.push({student:x,rank:1,key:"target_group_leader",tier:"وسام التفوق",points:Number(x.total_points)||0}));
+   groupRows.filter(x=>(Number(x.total_points)||0)===top).forEach(x=>addPreview({student:x.student,rank:1,key:"target_group_leader",tier:"وسام التفوق",points:Number(x.total_points)||0,target_group_at_award:x.student.group_level}));
   });
   const levelGroups=new Map();
   (studentsResult.data||[]).forEach(student=>{
@@ -994,15 +1015,49 @@ async function previewMonthlyAwards(){
   levelGroups.forEach(groupRows=>{
    const top=Math.max(...groupRows.map(x=>x.lifetimePoints));
    groupRows.filter(x=>x.lifetimePoints===top&&x.levelRank>targetGroupOrder(x.student.group_level))
-    .forEach(x=>preview.push({student:x.student,rank:1,key:"higher_group_leader",tier:"وسام التميز",points:x.lifetimePoints}));
+    .forEach(x=>addPreview({student:x.student,rank:1,key:"higher_group_leader",tier:"وسام التميز",points:x.lifetimePoints,target_group_at_award:x.student.group_level}));
   });
-  (existingResult.data||[]).filter(a=>a.achievement_key==="target_reached"||a.achievement_key==="target_exceeded").forEach(a=>{
-   const student=students.get(a.student_id);if(student)preview.push({student:{...student,full_name:a.student_name,student_code:a.student_code},rank:null,key:a.achievement_key,tier:a.medal_tier,points:a.points_at_award});
+  (studentsResult.data||[]).forEach(student=>{
+   const lp=life.get(student.id)||0,tr=targetGroupOrder(student.group_level),lr=currentLevelOrder(lp);
+   if(tr>6)return;
+   if(lr>=tr&&!previewKeys.has(keyOf(student.id,"target_reached",student.group_level))){
+    addPreview({student,rank:null,key:"target_reached",tier:"وسام الاستحقاق",points:lp,target_group_at_award:student.group_level});
+   }
+   if(lr>tr&&!previewKeys.has(keyOf(student.id,"target_exceeded",student.group_level))){
+    addPreview({student,rank:null,key:"target_exceeded",tier:"وسام التقدير",points:lp,target_group_at_award:student.group_level});
+   }
+  });
+  existingAwards.forEach(a=>{
+   const key=keyOf(a.student_id,a.achievement_key,a.target_group_at_award);
+   if(previewKeys.has(key))return;
+   const student=students.get(a.student_id)||{id:a.student_id,full_name:a.student_name,student_code:a.student_code,group_level:a.target_group_at_award};
+   preview.push({student,rank:a.rank_at_award,key:a.achievement_key,tier:a.medal_tier,points:a.points_at_award,target_group_at_award:a.target_group_at_award,existingStatus:a.status,notExpected:true});
   });
   const d=new Date(competition.month_start+"T00:00:00");
   const title="تحدي "+d.toLocaleDateString("ar-EG",{month:"long",year:"numeric"});
-  const rowsHtml=preview.map(x=>'<div class="preview-award-row"><b>'+esc(x.student.full_name)+'</b> · '+esc(x.tier)+'<br>'+esc(awardAchievementLabel(x.key))+(x.target_group_at_award?" · المجموعة المستهدفة: "+esc(x.target_group_at_award):"")+(x.rank?' · المركز '+x.rank:"")+' · '+Number(x.points||0).toLocaleString("en-US")+' نقطة</div>').join("");
-  panel.innerHTML='<h4>معاينة أوسمة '+esc(title)+'</h4><p class="muted-note">هذه معاينة للعرض فقط. لن تُمنح أي أوسمة قبل إغلاق التحدي، ولن تغيّر المعاينة أي بيانات.</p><p><b>'+preview.length+'</b> استحقاقًا متوقعًا وفق البيانات الحالية، وقد يتغير العدد قبل الإغلاق.</p>'+(rowsHtml||'<p class="muted-note">لا توجد استحقاقات ظاهرة حاليًا.</p>');
+  const rowsHtml=preview.map(x=>{
+   const status=x.existingStatus?(x.existingStatus==="active"?"موجود بالفعل":"موجود لكنه ملغي"):(x.notExpected?"وسام سابق يحتاج مراجعة":"استحقاق متوقع");
+   return '<div class="preview-award-row"><b>'+esc(x.student.full_name)+'</b> · '+esc(x.tier)+'<br>'+esc(awardAchievementLabel(x.key))+(x.target_group_at_award?" · المجموعة المستهدفة: "+esc(x.target_group_at_award):"")+(x.rank?' · المركز '+x.rank:"")+' · '+Number(x.points||0).toLocaleString("en-US")+' نقطة<br><small>'+status+(x.notExpected?" · لا يظهر ضمن الاستحقاقات الحالية":"")+'</small></div>';
+  }).join("");
+  const reviewNote=competition.awards_revision_pending?
+   '<section class="monthly-awards-reapproval"><p><b>هذا التحدي أُعيد فتحه ثم إغلاقه للتصحيح.</b> الأوسمة القديمة لم تتغير تلقائيًا. الاعتماد يضيف الاستحقاقات الجديدة فقط؛ أما الأوسمة القديمة التي لم تعد مستحقة فتراجعها الإدارة وتلغيها من قسم إدارة الأوسمة.</p><button id="approveReopenedAwardsBtn" class="primary" type="button">اعتماد الاستحقاقات بعد التصحيح</button></section>':"";
+  panel.innerHTML='<h4>معاينة أوسمة '+esc(title)+'</h4><p class="muted-note">المعاينة للعرض والمراجعة فقط، ولا تمنح أي وسام بمجرد فتحها.</p><p><b>'+preview.length+'</b> بندًا للمراجعة وفق البيانات الحالية.</p>'+(rowsHtml||'<p class="muted-note">لا توجد استحقاقات ظاهرة حاليًا.</p>')+reviewNote;
+  const approve=$("approveReopenedAwardsBtn");
+  if(approve)approve.onclick=async()=>{
+   const reason=window.prompt("اكتب سبب اعتماد تصحيح الأوسمة (إجباري):");
+   if(reason===null)return;
+   if(!reason.trim()){alert("لازم تكتب سبب الاعتماد.");return}
+   if(!window.confirm("بعد المراجعة، اعتماد الاستحقاقات الجديدة لهذا التحدي؟ الأوسمة القديمة لن تُلغى تلقائيًا."))return;
+   approve.disabled=true;approve.textContent="جاري الاعتماد...";
+   try{
+    const result=await db.rpc("admin_approve_reopened_achievement_awards",{p_competition_id:competition.id,p_reason:reason.trim()});
+    if(result.error)throw result.error;
+    await loadDashboard();
+    await previewMonthlyAwards(competition.id);
+    const note=document.createElement("p");note.className="message";note.textContent="تم اعتماد التصحيح. أضيف "+(Number(result.data)||0)+" وسامًا جديدًا، ولم يتم إلغاء أي وسام قديم تلقائيًا.";
+    panel.prepend(note);
+   }catch(error){approve.disabled=false;approve.textContent="اعتماد الاستحقاقات بعد التصحيح";alert("تعذر اعتماد التصحيح: "+error.message)}
+  };
  }catch(error){panel.innerHTML='<p class="message">'+esc("تعذر تجهيز المعاينة: "+error.message)+'</p>'}
 }
 $("monthlyAwardsPreviewBtn").onclick=()=>{
@@ -1029,7 +1084,7 @@ function renderPeriodControls(monthly,weekly){
 async function loadHistory(monthly){
   const [w,c]=await Promise.all([
     db.from("weekly_challenges").select("id,competition_id,week_number,title,week_start,week_end,status").order("created_at",{ascending:false}).limit(200),
-    db.from("competitions").select("id,title,month_start,month_end,status").order("created_at",{ascending:false}).limit(20)
+    db.from("competitions").select("id,title,month_start,month_end,status,awards_revision_pending").order("created_at",{ascending:false}).limit(20)
   ]);
   if(w.error)throw w.error;if(c.error)throw c.error;
   const activeMonthWeeks=(w.data||[]).filter(x=>x.competition_id===monthly?.id);
@@ -1055,7 +1110,7 @@ async function loadHistory(monthly){
   }).join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
 }
 $("weeklyHistory").onclick=handleHistoryClick;$("weeklyProgress").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
-async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
+async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;if(b.dataset.historyType==="monthly_awards"){await previewMonthlyAwards(b.dataset.historyId);return}await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
 async function showPeriodResults(type,id){
   try{
     const monthly=type==="monthly",column=monthly?"competition_id":"weekly_challenge_id",view=monthly?"student_monthly_totals":"student_weekly_totals";
