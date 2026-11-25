@@ -96,15 +96,18 @@ function renderStudentAwardHistory(awards){
  }).join("")||'<p class="muted-note">لسه مفيش أوسمة مسجلة للطالب.</p>';
 }
 function awardGreetingText(awards){
- const messages=(awards||[]).map(a=>({
-  overall_first:"حققت المركز الأول على الترتيب العام؛ إنجاز يستحق الفخر، فحافظ على القمة.",
-  overall_2_3:"وصلت إلى المركز الثاني أو الثالث على الترتيب العام؛ واصل اجتهادك.",
-  overall_4_10:"دخلت قائمة العشرة الأوائل على الترتيب العام؛ خطوتك القادمة نحو القمة.",
-  target_reached:"بلغت مجموعتك المستهدفة؛ مبارك لك تحقيق هدفك.",
-  target_exceeded:"تجاوزت مجموعتك المستهدفة؛ طموحك أخذك إلى مستوى أعلى.",
-  target_group_leader:"تصدرت مجموعتك المستهدفة؛ حافظ على تميزك.",
-  higher_group_leader:"تجاوزت هدفك وتصدرت مجموعة أعلى؛ إنجاز يجمع الطموح والتميز."
- }[a.achievement_key]||"حققت إنجازًا جديدًا يستحق الاحتفاء."));
+ const messages=(awards||[]).map(a=>{
+  const group=a.target_group_at_award?" ("+a.target_group_at_award+")":"";
+  return ({
+   overall_first:"حققت المركز الأول على الترتيب العام؛ إنجاز يستحق الفخر، فحافظ على القمة.",
+   overall_2_3:"وصلت إلى المركز الثاني أو الثالث على الترتيب العام؛ واصل اجتهادك.",
+   overall_4_10:"دخلت قائمة العشرة الأوائل على الترتيب العام؛ خطوتك القادمة نحو القمة.",
+   target_reached:"بلغت المجموعة المستهدفة"+group+"؛ مبارك لك تحقيق هدفك.",
+   target_exceeded:"تجاوزت المجموعة المستهدفة"+group+"؛ طموحك أخذك إلى مستوى أعلى.",
+   target_group_leader:"تصدرت المجموعة المستهدفة"+group+"؛ حافظ على تميزك.",
+   higher_group_leader:"تجاوزت هدفك وتصدرت مجموعة أعلى من المستهدفة"+group+"؛ إنجاز يجمع الطموح والتميز."
+  }[a.achievement_key]||"حققت إنجازًا جديدًا يستحق الاحتفاء.");
+ });
  return messages.length?messages.join(" "):"كل خطوة في طريق حفظ كتاب الله إنجاز. واصل اجتهادك، فالقمة تستحق السعي.";
 }
 function attachStudentAwards(data){
@@ -998,7 +1001,7 @@ async function previewMonthlyAwards(){
   });
   const d=new Date(competition.month_start+"T00:00:00");
   const title="تحدي "+d.toLocaleDateString("ar-EG",{month:"long",year:"numeric"});
-  const rowsHtml=preview.map(x=>'<div class="preview-award-row"><b>'+esc(x.student.full_name)+'</b> · '+esc(x.tier)+'<br>'+esc(awardAchievementLabel(x.key))+(x.rank?' · المركز '+x.rank:"")+' · '+Number(x.points||0).toLocaleString("en-US")+' نقطة</div>').join("");
+  const rowsHtml=preview.map(x=>'<div class="preview-award-row"><b>'+esc(x.student.full_name)+'</b> · '+esc(x.tier)+'<br>'+esc(awardAchievementLabel(x.key))+(x.target_group_at_award?" · المجموعة المستهدفة: "+esc(x.target_group_at_award):"")+(x.rank?' · المركز '+x.rank:"")+' · '+Number(x.points||0).toLocaleString("en-US")+' نقطة</div>').join("");
   panel.innerHTML='<h4>معاينة أوسمة '+esc(title)+'</h4><p class="muted-note">هذه معاينة للعرض فقط. لن تُمنح أي أوسمة قبل إغلاق التحدي، ولن تغيّر المعاينة أي بيانات.</p><p><b>'+preview.length+'</b> استحقاقًا متوقعًا وفق البيانات الحالية، وقد يتغير العدد قبل الإغلاق.</p>'+(rowsHtml||'<p class="muted-note">لا توجد استحقاقات ظاهرة حاليًا.</p>');
  }catch(error){panel.innerHTML='<p class="message">'+esc("تعذر تجهيز المعاينة: "+error.message)+'</p>'}
 }
