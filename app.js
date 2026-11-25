@@ -1106,7 +1106,7 @@ async function loadHistory(monthly){
       const n=i+1,x=weeks.find(v=>Number(v.week_number)===n);
       return "<div class='archive-week-row'><div><b>الأسبوع "+weekName(n)+"</b><small>"+(x?dateText(x.week_start)+" – "+dateText(x.week_end):"لم يبدأ بعد")+"</small></div><span>"+(x?(x.status==="active"?"نشط":"مكتمل"):"غير متاح")+"</span>"+(x?"<button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button>":"")+"</div>";
     }).join("");
-    return "<tr><td>"+esc(month.title||"التحدي الشهري")+"</td><td>"+dateText(month.month_start)+" – "+dateText(month.month_end)+"</td><td>"+(month.status==="active"?"نشط":"منتهي")+"</td><td><details class='admin-month-archive'><summary>الأسابيع الخمسة</summary>"+slots+"</details>"+(month.status==="archived"?"<button class='history-btn' data-history-type='monthly' data-history-id='"+month.id+"'>نتائج الشهر</button>":"")+"</td></tr>";
+    return "<tr><td>"+esc(month.title||"التحدي الشهري")+"</td><td>"+dateText(month.month_start)+" – "+dateText(month.month_end)+"</td><td>"+(month.status==="active"?"نشط":"منتهي")+"</td><td><details class='admin-month-archive'><summary>الأسابيع الخمسة</summary>"+slots+"</details>"+(month.status==="archived"?"<button class='history-btn' data-history-type='monthly' data-history-id='"+month.id+"'>نتائج الشهر</button>":"")+(month.status==="archived"&&month.awards_revision_pending?"<button class='history-btn' data-history-type='monthly_awards' data-history-id='"+month.id+"'>مراجعة أوسمة التحدي</button>":"")+"</td></tr>";
   }).join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
 }
 $("weeklyHistory").onclick=handleHistoryClick;$("weeklyProgress").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
