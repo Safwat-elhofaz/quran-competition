@@ -727,8 +727,8 @@ function renderAchievementAwardSearch(){
  detail.innerHTML="";
  const query=search.value.trim();
  if(query.length<2){results.innerHTML='<p class="muted-note">ابدأ بكتابة حرفين على الأقل من الاسم أو الكود.</p>';return}
- const normalized=normalizeStudentName(query);
- const rows=dashboardStudents.filter(s=>normalizeStudentName(s.full_name).includes(normalized)||String(s.student_code||"").includes(query)).slice(0,20);
+ const normalized=normalizeStudentName(query),codeQuery=normalizeCardNumber(query);
+ const rows=dashboardStudents.filter(s=>normalizeStudentName(s.full_name).includes(normalized)||String(s.student_code||"").includes(codeQuery)).slice(0,20);
  results.innerHTML=rows.length?rows.map(s=>{
   const total=Number(dashboardRanked.find(t=>t.student_id===s.id)?.total_points||0);
   return '<article class="achievement-award-search-result"><div><b>'+esc(s.full_name)+'</b><small>الكود: '+esc(s.student_code)+' · '+esc(level(total))+' · المجموعة المستهدفة: '+esc(s.group_level||"غير محددة")+'</small></div><button type="button" class="secondary" data-award-select-student="'+s.id+'">فتح ملف الأوسمة</button></article>';
