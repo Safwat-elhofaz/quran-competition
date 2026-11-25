@@ -251,7 +251,7 @@ function renderAchievementCard(data){
  const trend=history.length>1?(Number(history[history.length-1].points)||0)-(Number(history[history.length-2].points)||0):null;
  const trendLine=trend===null?"لا توجد بيانات أسبوعين مكتملين للمقارنة بعد.":trend>0?"زاد رصيدك في آخر أسبوع مسجل بـ "+trend.toLocaleString("en-US")+" نقطة عن الأسبوع السابق.":trend<0?"قل رصيدك في آخر أسبوع مسجل بـ "+Math.abs(trend).toLocaleString("en-US")+" نقطة عن الأسبوع السابق.":"رصيدك في آخر أسبوع مسجل يساوي الأسبوع السابق.";
  const rankLine=!groupAssigned?"لا يمكن حساب ترتيب نسبي دون مجموعة مستهدفة.":groupTopPercent===null?"ترتيبك النسبي داخل المجموعة غير متاح حاليًا.":"ضمن أفضل "+groupTopPercent+"% من المجموعة المستهدفة (ترتيب "+groupRank+" من "+groupSize+").";
- const weeklyLine=history.length?"نقاطك المسجلة أسبوعيًا: "+history.map(w=>"الأسبوع "+Number(w.week_number)+": "+(Number(w.points)||0).toLocaleString("en-US")+" نقطة").join(" · "):"لا توجد نقاط أسبوعية مسجلة في المسابقة الحالية.";
+ const weeklyLine=history.length?"نقاطك المسجلة أسبوعيًا: "+history.map(w=>"الأسبوع "+Number(w.week_number)+": "+(Number(w.points)||0).toLocaleString("en-US")+" نقطة").join(" · "):"لا توجد نقاط أسبوعية مسجلة في التحدي الحالي.";
  const leaderLine=!groupAssigned?"لا يمكن تحديد الفارق عن الأول دون مجموعة مستهدفة.":gap===null?"الفارق عن صاحب المركز الأول غير متاح حاليًا.":gap===0?"أنت في صدارة مجموعتك المستهدفة"+(groupRank>1?" بالتساوي مع طالب آخر.":"."):"يفصلك عن صاحب المركز الأول في مجموعتك "+gap.toLocaleString("en-US")+" نقطة.";
  const lines=[goalLine,avgLine,trendLine,rankLine,weeklyLine,leaderLine];
  const max=Math.max(1,...history.flatMap(w=>[Number(w.points)||0,Number(w.group_average)||0]));
@@ -262,7 +262,7 @@ function renderAchievementCard(data){
  const graph=history.length?'<svg class="achievement-chart" viewBox="0 0 620 155" role="img" aria-label="تطور نقاط الطالب ومتوسط المجموعة"><line x1="20" y1="135" x2="600" y2="135"/><line x1="20" y1="77" x2="600" y2="77"/><line x1="20" y1="19" x2="600" y2="19"/><path class="achievement-average-line" d="'+path(avg)+'"/><path class="achievement-own-line" d="'+path(own)+'"/>'+own.map(p=>'<circle class="achievement-own-dot" cx="'+p.x+'" cy="'+p.y+'" r="5"/>').join("")+'<text x="25" y="151">البداية</text><text x="595" y="151" text-anchor="end">الآن</text></svg>':'<div class="achievement-chart-empty">لا توجد بيانات أسبوعية كافية لرسم التطور بعد</div>';
  const summary=lines.map((v,i)=>'<li><span>'+(i+1)+'</span><p>'+esc(v)+'</p></li>').join("");
  return `<section class="achievement-preview-wrap"><div class="achievement-preview-heading"><b>كارت الإنجاز الجاهز للمشاركة</b><small>مقاس رأسي مناسب للستوري 9:16</small></div><article class="achievement-card" id="studentAchievementCard" dir="rtl">
- <header class="achievement-card-header"><span class="achievement-mark">۞</span><div><b>مركز صفوة الحفاظ</b><small>مسابقة النقاط · بطاقة إنجاز الطالب</small></div><span class="achievement-mark">۞</span></header>
+ <header class="achievement-card-header"><span class="achievement-mark">۞</span><div><b>مركز صفوة الحفاظ</b><small>تحدي صفوة الحفاظ · بطاقة إنجاز الطالب</small></div><span class="achievement-mark">۞</span></header>
  <div class="achievement-student-name"><h2>__NAME__</h2><span>المجموعة المستهدفة: __GROUP__</span></div>
  <div class="achievement-total"><strong>__TOTAL__</strong><span>نقطة</span></div>
  <div class="achievement-ranks"><div><small>المستوى الحالي</small><b>__LEVEL__</b></div><div><small>ترتيب المجموعة</small><b>__GRANK__ من __GSIZE__</b></div><div><small>الترتيب العام</small><b>__RANK__ من __SIZE__</b></div></div>
@@ -399,7 +399,7 @@ function renderStudentProfile(data){
  const topDifference=s.target_group_top_difference_percent==null?null:Number(s.target_group_top_difference_percent);
  const percentText=value=>value===null?"—":(value>0?"+":"")+value+"%";
  const chartMax=Math.max(1,...history.flatMap(w=>[Number(w.points)||0,Number(w.group_average)||0]));
- const weeklyChartHtml=history.length?'<div class="student-weekly-chart">'+history.map(w=>'<div class="student-week-column"><div class="student-week-bars"><i class="student-own-bar" style="height:'+Math.max(3,(Number(w.points)||0)/chartMax*100)+'%"></i><i class="student-average-bar" style="height:'+Math.max(3,(Number(w.group_average)||0)/chartMax*100)+'%"></i></div><b>أسبوع '+Number(w.week_number)+'</b><small>'+(Number(w.points)||0)+' نقطة</small></div>').join("")+'</div><div class="student-chart-legend"><span><i class="student-own-key"></i> نقاطك</span><span><i class="student-average-key"></i> متوسط المجموعة</span></div>':'<p class="muted-note">لا توجد بيانات أسابيع مسجلة في المسابقة الحالية بعد.</p>';
+ const weeklyChartHtml=history.length?'<div class="student-weekly-chart">'+history.map(w=>'<div class="student-week-column"><div class="student-week-bars"><i class="student-own-bar" style="height:'+Math.max(3,(Number(w.points)||0)/chartMax*100)+'%"></i><i class="student-average-bar" style="height:'+Math.max(3,(Number(w.group_average)||0)/chartMax*100)+'%"></i></div><b>أسبوع '+Number(w.week_number)+'</b><small>'+(Number(w.points)||0)+' نقطة</small></div>').join("")+'</div><div class="student-chart-legend"><span><i class="student-own-key"></i> نقاطك</span><span><i class="student-average-key"></i> متوسط المجموعة</span></div>':'<p class="muted-note">لا توجد بيانات أسابيع مسجلة في التحدي الحالي بعد.</p>';
  const ownVsAverage=Math.max(0,Number(performance.group_average)||0,total,1),groupOwnWidth=Math.min(100,total/ownVsAverage*100),groupAverageWidth=Math.min(100,(Number(performance.group_average)||0)/ownVsAverage*100);
  const groupTopPoints=performance.group_top_points==null?null:Number(performance.group_top_points);
  const leaderGap=groupTopPoints===null?null:Math.max(0,groupTopPoints-total);
@@ -425,7 +425,7 @@ function renderStudentProfile(data){
     <div><span>التحدي الشهري</span><b>${monthly?esc(monthly.title||"التحدي الشهري"):"لا يوجد تحدٍ نشط"}</b><small>ترتيبك: ${monthly?Number(monthly.rank)||"—":"—"} · نقاطك: ${monthlyPoints}</small>${monthly?'<small>بداية التحدي: '+dateText(String(monthly.month_start||"").slice(0,10))+'</small>':""}</div>
    </div></section>
 
-   <section class="student-progress-card student-performance-card"><h3>أداؤك أسبوعًا بعد أسبوع</h3><p class="student-chart-note">مقارنة نقاطك بمتوسط نقاط مجموعتك في كل أسبوع من المسابقة</p>${weeklyChartHtml}</section>
+   <section class="student-progress-card student-performance-card"><h3>أداؤك أسبوعًا بعد أسبوع</h3><p class="student-chart-note">مقارنة نقاطك بمتوسط نقاط مجموعتك في كل أسبوع من التحدي</p>${weeklyChartHtml}</section>
    <section class="student-progress-card student-group-performance"><h3>معدلات أدائك في مجموعتك</h3><div class="student-group-kpis"><div><strong>${Number(performance.group_rank)||"—"}</strong><span>ترتيبك في المجموعة</span></div><div><strong>${Number(performance.group_size)||0}</strong><span>عدد طلاب المجموعة</span></div><div><strong>${Number(performance.group_average)||0}</strong><span>متوسط نقاط المجموعة</span></div></div><div class="student-compare-row"><span>نقاطك</span><div class="student-compare-track"><i style="width:${groupOwnWidth}%"></i></div><b>${total}</b></div><div class="student-compare-row average"><span>المتوسط</span><div class="student-compare-track"><i style="width:${groupAverageWidth}%"></i></div><b>${Number(performance.group_average)||0}</b></div><p class="student-chart-note">${total>Number(performance.group_average||0)?"أنت أعلى من متوسط مجموعتك بـ "+(total-Number(performance.group_average||0))+" نقطة.":total<Number(performance.group_average||0)?"متبقي لك "+(Number(performance.group_average||0)-total)+" نقطة لتصل إلى متوسط مجموعتك.":"أنت عند متوسط مجموعتك تمامًا."}</p></section>
    <section class="student-progress-card student-nearby-card"><h3>الطالبان المجاوران لترتيبك</h3><p class="student-chart-note">اسم الطالب السابق والطالب التالي لك مباشرة في ترتيب المجموعة</p>${neighborHtml}</section>
    <div class="student-report-footer"><span>أثرٌ يبقى</span><i>۞</i><span>نورٌ لا ينطفئ</span><small>هذا التقرير يعرض بيانات الطالب وقت الاستعلام</small></div>
@@ -951,7 +951,7 @@ async function previewMonthlyAwards(){
   if(monthlyResult.error)throw monthlyResult.error;if(studentsResult.error)throw studentsResult.error;if(lifetimeResult.error)throw lifetimeResult.error;if(existingResult.error)throw existingResult.error;
   const students=new Map((studentsResult.data||[]).map(s=>[s.id,s]));
   const life=new Map((lifetimeResult.data||[]).map(s=>[s.student_id,Number(s.total_points)||0]));
-  const rows=(monthlyResult.data||[]).filter(x=>x.is_active&&students.has(x.student_id)).map(x=>({...x,student:students.get(x.student_id)}));
+  const rows=(monthlyResult.data||[]).filter(x=>x.is_active&&Number(x.total_points)>0&&students.has(x.student_id)).map(x=>({...x,student:students.get(x.student_id)}));
   const preview=[];
   const overall=[...rows].sort((a,b)=>Number(b.total_points)-Number(a.total_points));
   let rank=0,previous=null;
