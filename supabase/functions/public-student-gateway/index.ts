@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
 
     const client = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { "x-forwarded-for": ip } },
+      global: { headers: { "x-forwarded-for": ip, "Authorization": "Bearer " + serviceRoleKey } },
     });
 
     // An active administrator keeps the existing unrestricted administrative workflow.
