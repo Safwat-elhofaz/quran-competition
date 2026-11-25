@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
       issue: { max: 20, window: 600 },
       verify: { max: 60, window: 600 },
     } as const;
-    if (!(action in rules)) return response({ error: "نوع الطلب غير صحيح." }, 400);
+    if (!Object.hasOwn(rules, action)) return response({ error: "نوع الطلب غير صحيح." }, 400);
 
     const ip = (req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") ||
       req.headers.get("x-forwarded-for")?.split(",")[0] || "").trim();
