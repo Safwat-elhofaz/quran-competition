@@ -164,12 +164,13 @@ function renderAchievementCard(data){
  .replace("__REMAIN__",targetPoints?(total>=targetPoints?"تم تحقيق الهدف":"باقي "+(targetPoints-total).toLocaleString("en-US")+" نقطة"):"لا يوجد هدف محدد")
  .replace("__GRAPH__",graph).replace("__SUMMARY__",summary);
 }
-async function createAchievementExportStage(){
- if(!currentAchievementData)throw Error("بيانات كارت الإنجاز غير متاحة");
+async function createAchievementExportStage(studentDataOverride,studentCodeOverride){
+ const sourceData=studentDataOverride===undefined?currentAchievementData:studentDataOverride;
+ if(!sourceData&&!studentCodeOverride)throw Error("بيانات كارت الإنجاز غير متاحة");
  const holder=document.createElement("div");
  holder.className="achievement-export-stage";
  if(!window.QRCode)throw Error("تعذر تحميل مولّد رمز QR. حدّث الصفحة وحاول مرة أخرى.");
- const studentCode=currentAchievementData?.student?.student_code;
+ const studentCode=studentCodeOverride||sourceData?.student?.student_code;
  if(!studentCode)throw Error("كود الطالب غير متاح لإنشاء كارت الإنجاز.");
  const {data:cardRows,error:cardError}=await db.rpc("get_or_create_achievement_card",{p_student_code:String(studentCode)});
  if(cardError)throw cardError;
@@ -212,17 +213,55 @@ async function createAchievementExportStage(){
  `;
  holder.prepend(style);
  document.body.appendChild(holder);
- return {holder,card};
+ return {holder,card,cardData};
 }
-async function printStudentAchievementCard(){
+async function printStudentAchievementCard(studentDataOverride,studentCodeOverride,statusElement){
  let stage;
- const status=$("studentExportMessage");
- try{stage=await createAchievementExportStage()}catch(e){status.textContent=e.message||"تعذر تجهيز كارت الإنجاز";return}
+ const status=statusElement||$("studentExportMessage");
+ try{stage=await createAchievementExportStage(studentDataOverride,studentCodeOverride)}catch(e){if(status)status.textContent=e.message||"تعذر تجهيز كارت الإنجاز";throw e}
  document.body.classList.add("printing-achievement-card");
  const cleanup=()=>{document.body.classList.remove("printing-achievement-card");stage.holder.remove()};
  window.addEventListener("afterprint",cleanup,{once:true});
  window.print();
  setTimeout(cleanup,2500);
+ return stage;
+}
+async function exportAdminStudentAchievementCard(studentId,mode,button){
+ const student=dashboardStudents.find(x=>x.id===studentId);
+ if(!student)return;
+ const originalText=button.textContent;
+ button.disabled=true;
+ button.textContent=mode==="image"?"جاري تجهيز الصورة...":"جاري تجهيز PDF...";
+ msg("studentManagementMessage","جاري تجهيز كارت إنجاز "+student.full_name+"...");
+ let stage=null;
+ try{
+  stage=await createAchievementExportStage(null,student.student_code);
+  if(mode==="pdf"){
+   document.body.classList.add("printing-achievement-card");
+   const cleanup=()=>{document.body.classList.remove("printing-achievement-card");stage?.holder.remove()};
+   window.addEventListener("afterprint",cleanup,{once:true});
+   window.print();
+   setTimeout(cleanup,2500);
+   msg("studentManagementMessage","تم تجهيز كارت "+student.full_name+". اختر حفظ بصيغة PDF من نافذة الطباعة.");
+   stage=null;
+  }else{
+   if(!window.html2canvas)throw Error("ميزة تنزيل الصور لم تُحمّل بعد. حدّث الصفحة وحاول مرة أخرى.");
+   await document.fonts.ready;
+   const canvas=await window.html2canvas(stage.card,{scale:1.5,backgroundColor:"#075443",useCORS:true,logging:false,width:1080,height:1920,windowWidth:1080,windowHeight:1920,scrollX:0,scrollY:0});
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+   if(!blob)throw Error("تعذر إنشاء ملف الصورة");
+   const url=URL.createObjectURL(blob),a=document.createElement("a");
+   const studentName=stage.cardData?.snapshot?.student?.full_name||student.full_name||"الطالب";
+   a.href=url;a.download="كارت-إنجاز-صفوة-الحفاظ-"+studentName.replace(/[^\\u0600-\\u06FF\\w-]+/g,"-")+".png";
+   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+   msg("studentManagementMessage","تم تنزيل صورة كارت إنجاز "+student.full_name+" بنجاح.");
+  }
+ }catch(error){
+  msg("studentManagementMessage","تعذر تجهيز كارت الطالب: "+(error.message||"حاول مرة أخرى."),true);
+ }finally{
+  if(stage?.holder)stage.holder.remove();
+  button.disabled=false;button.textContent=originalText;
+ }
 }
 
 function renderStudentProfile(data){
@@ -461,6 +500,7 @@ function renderAdminStudentQuickView(student){
  "<div class='student-search-card-actions admin-profile-actions'><button type='button' class='history-btn' data-edit-student='"+student.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+student.id+"'>تعديل المجموعة</button></div>"+
  "<form id='editStudentForm' class='stack student-editor hidden'><h4>تعديل اسم الطالب</h4><input id='editStudentId' type='hidden'><label for='editStudentName'>الاسم الجديد</label><input id='editStudentName' maxlength='150' required><div class='actions'><button class='primary'>حفظ الاسم</button><button type='button' id='cancelStudentEdit' class='secondary'>إلغاء</button></div></form>"+
  "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
+ "<div class='admin-achievement-actions'><button type='button' class='history-btn' data-admin-card-image='"+student.id+"' "+disabled+">🖼️ تنزيل صورة الكارت</button><button type='button' class='history-btn' data-admin-card-pdf='"+student.id+"' "+disabled+">🖨️ طباعة / حفظ PDF</button></div>"+
  "<button type='button' class='primary admin-open-profile' data-open-admin-profile='"+student.id+"'>فتح ملف الطالب ←</button></section></article>";
 }
 function renderAdminStudentProfile(student){
@@ -563,6 +603,10 @@ async function loadAdminStudentProfile(id){
 }
 $("studentAdminSearch").oninput=()=>{selectedAdminStudentId=null;adminStudentProfileOpenId=null;adminStudentEntries=null;adminStudentEntriesLoading=false;renderStudentManagement()};
 $("studentManagementResults").onclick=async e=>{
+ const adminImage=e.target.closest("[data-admin-card-image]");
+ if(adminImage){await exportAdminStudentAchievementCard(adminImage.dataset.adminCardImage,"image",adminImage);return}
+ const adminPdf=e.target.closest("[data-admin-card-pdf]");
+ if(adminPdf){await exportAdminStudentAchievementCard(adminPdf.dataset.adminCardPdf,"pdf",adminPdf);return}
  const selectStudent=e.target.closest("[data-select-admin-student]");
  if(selectStudent){selectedAdminStudentId=selectStudent.dataset.selectAdminStudent;adminStudentProfileOpenId=null;adminStudentEntries=null;adminStudentEntriesLoading=false;renderStudentManagement();return}
  const openProfile=e.target.closest("[data-open-admin-profile]");
