@@ -5,7 +5,7 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const siteOrigin = "https://safwat-elhofaz.github.io";
 const corsHeaders = {
   "Access-Control-Allow-Origin": siteOrigin,
-  "Access-Control-Allow-Headers": "apikey, content-type",
+  "Access-Control-Allow-Headers": "apikey, authorization, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Vary": "Origin",
 };
@@ -42,15 +42,30 @@ Deno.serve(async (req: Request) => {
       req.headers.get("x-forwarded-for")?.split(",")[0] || "").trim();
     if (!ip || ip.length > 128) return response({ error: "تعذر التحقق من مصدر الاتصال. حاول مرة أخرى." }, 503);
 
-    // Forward the gateway-verified client IP to the existing database lookup limiter.
     const client = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { headers: { "x-forwarded-for": ip } },
     });
-    const rule = rules[action as keyof typeof rules];
-    const bucketKey = await sha256(action + ":" + ip);
+
+    // An active administrator keeps the existing unrestricted administrative workflow.
+    let adminUserId: string | null = null;
+    const authorization = req.headers.get("authorization") || "";
+    const token = authorization.replace(/^Bearer\s+/i, "").trim();
+    if (token) {
+      const { data: authData } = await client.auth.getUser(token);
+      if (authData.user) {
+        const { data: adminProfile } = await client.from("admin_profiles")
+          .select("is_active").eq("user_id", authData.user.id).maybeSingle();
+        if (adminProfile?.is_active === true) adminUserId = authData.user.id;
+      }
+    }
+
+    const publicRule = rules[action as keyof typeof rules];
+    const maxRequests = adminUserId && action !== "lookup" ? 500 : publicRule.max;
+    const bucketIdentity = adminUserId && action !== "lookup" ? "admin:" + adminUserId : "ip:" + ip;
+    const bucketKey = await sha256(action + ":" + bucketIdentity);
     const { data: permitted, error: limitError } = await client.rpc("consume_public_request_limit", {
-      p_bucket_key: bucketKey, p_max_requests: rule.max, p_window_seconds: rule.window,
+      p_bucket_key: bucketKey, p_max_requests: maxRequests, p_window_seconds: publicRule.window,
     });
     if (limitError) throw limitError;
     if (!permitted) return response({ error: "تم تجاوز عدد المحاولات المسموح. حاول مرة أخرى بعد قليل." }, 429);
