@@ -717,3 +717,9 @@ button:disabled{opacity:.6;cursor:wait}
 .stats-students-trigger span{display:block;color:var(--muted);font-size:12px;font-weight:600}
 .stats-students-trigger strong{display:block;position:relative;z-index:1;color:var(--gold);font-size:34px;transition:color .2s}
 .dark .stats-students-trigger span{color:var(--muted)}
+
+
+/* Quick achievement-card exports in student management */
+.admin-achievement-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.admin-achievement-actions button{width:100%;min-width:0;white-space:normal;line-height:1.5}
+@media(max-width:560px){.admin-achievement-actions{grid-template-columns:1fr 1fr;gap:7px}.admin-achievement-actions button{padding:10px 7px;font-size:11px}}
