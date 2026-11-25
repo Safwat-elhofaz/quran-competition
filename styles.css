@@ -750,3 +750,100 @@ button:disabled{opacity:.6;cursor:wait}
 .dark .student-journey-event>div,.dark .achievement-history-item{background:#192a22}
 .dark .student-journey-event.is-milestone>div{background:#332e1e}
 @media(max-width:600px){.achievement-history-list{grid-template-columns:1fr}.student-journey-event>div{padding:8px 10px}}
+
+
+/* ===== Challenge identity, awards and ceremonial leaderboards ===== */
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.header-admin-link{border:1px solid rgba(181,139,59,.35);background:var(--surface);color:var(--green-deep);border-radius:12px;padding:9px 13px;font-size:12px;font-weight:800}
+.header-admin-link:hover{background:var(--green-soft)}
+.hero h1{font-size:clamp(42px,6vw,70px);line-height:1.3}
+.hero-tagline{font-size:clamp(19px,2.5vw,25px)!important;font-weight:800;color:var(--gold);margin:10px 0 4px!important}
+.hero .actions{margin-top:24px}
+.hero .actions .primary{min-width:220px}
+.footer-help-link{display:inline-block;margin:0 0 14px;color:var(--green);font-weight:800;text-decoration:none;font-size:12px}
+.footer-help-link:hover{text-decoration:underline}
+.leaderboard-tribute{color:var(--gold);font-weight:800;font-size:13px;margin-top:7px}
+.leaderboard-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:14px 0 16px}
+.leaderboard-podium-item{position:relative;min-width:0;padding:13px 9px 12px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,var(--surface),var(--green-soft));text-align:center;overflow:hidden}
+.leaderboard-podium-item:before{content:"۞";position:absolute;inset:auto auto -13px -5px;font-size:46px;color:rgba(181,139,59,.08)}
+.leaderboard-podium-item.rank-1{border-color:#c9a34f;background:linear-gradient(145deg,#fff9e8,#f4e6bd);box-shadow:0 8px 20px rgba(181,139,59,.13)}
+.leaderboard-podium-item.rank-2{border-color:#b9c2bf}
+.leaderboard-podium-item.rank-3{border-color:#c99b75}
+.leaderboard-podium-rank{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:50%;background:var(--green-deep);color:white;font-weight:900;font-size:12px}
+.leaderboard-podium-item.rank-1 .leaderboard-podium-rank{background:linear-gradient(135deg,#d7b66b,#9a702b);color:#fff}
+.leaderboard-podium-item b{display:block;position:relative;margin:7px 0 3px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.leaderboard-podium-item small{display:block;color:var(--muted);font-size:10px}
+.dark .leaderboard-podium-item{background:linear-gradient(145deg,#20392d,#192a22)}
+.dark .leaderboard-podium-item.rank-1{background:linear-gradient(145deg,#3d3521,#282719);border-color:#b58b3b}
+.award-medal{--medal-a:#d7b66b;--medal-b:#916b2d;position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 58px;width:58px;height:58px;border-radius:50%;color:#fff8df;background:radial-gradient(circle at 32% 25%,var(--medal-a),var(--medal-b) 72%);border:3px double rgba(255,255,255,.75);box-shadow:0 4px 13px rgba(24,57,44,.15),inset 0 0 0 3px rgba(255,255,255,.18)}
+.award-medal:before{content:"";position:absolute;inset:5px;border:1px solid rgba(255,255,255,.58);border-radius:50%}
+.award-medal:after{content:"✦";position:absolute;top:-5px;right:-2px;color:var(--medal-a);font-size:15px;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.award-medal span{position:relative;z-index:1;font-size:25px;text-shadow:0 1px 3px rgba(0,0,0,.25)}
+.award-medal.medal-elite{--medal-a:#e8e3d4;--medal-b:#7d887f}
+.award-medal.medal-leadership{--medal-a:#e3c27b;--medal-b:#a87531}
+.award-medal.medal-excellence{--medal-a:#b7d5bd;--medal-b:#26704f}
+.award-medal.medal-superiority{--medal-a:#e7d39a;--medal-b:#a47a34}
+.award-medal.medal-appreciation{--medal-a:#c5d8ce;--medal-b:#557d68}
+.award-medal.medal-deserved{--medal-a:#eadfc3;--medal-b:#9b8050}
+.student-award-message{padding:18px 20px;margin:18px 0;border:1px solid rgba(181,139,59,.38);border-radius:18px;background:linear-gradient(125deg,#fff9e9,#eaf2ec);color:#294d3c}
+.student-award-message h3{margin:0 0 7px;color:#8b672b;font-size:17px}
+.student-award-message p{margin:5px 0;line-height:1.9;font-size:13px}
+.student-award-notification{padding:16px 18px;margin:14px 0;border:1px solid #d6bd7b;border-radius:17px;background:linear-gradient(135deg,#fff8e4,#f1ead2);color:#5f4a22}
+.student-award-notification b{display:block;font-size:15px;margin-bottom:5px}
+.student-award-notification p{margin:4px 0;font-size:12px;line-height:1.8}
+.student-awards-panel{margin:18px 0;padding:20px;border:1px solid rgba(181,139,59,.28);border-radius:19px;background:linear-gradient(145deg,var(--surface),var(--green-soft))}
+.student-awards-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}
+.student-awards-heading h3{margin:0;color:var(--green-deep);font-size:18px}
+.student-award-list{display:grid;gap:10px}
+.student-award-item{display:flex;align-items:center;gap:13px;padding:12px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+.student-award-item>div:last-child{min-width:0;flex:1}
+.student-award-item b{display:block;color:var(--green-deep);font-size:14px}
+.student-award-item p{margin:3px 0;color:var(--muted);font-size:12px;line-height:1.7}
+.student-award-item small{display:block;color:var(--gold);font-size:11px;font-weight:800}
+.student-all-awards-view{margin:18px 0;padding:20px;border:1px solid rgba(181,139,59,.3);border-radius:19px;background:var(--surface)}
+.student-award-month{margin:12px 0;border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--green-soft)}
+.student-award-month summary{cursor:pointer;color:var(--green-deep);font-weight:800;display:flex;justify-content:space-between;gap:10px;list-style:none}
+.student-award-month summary::-webkit-details-marker{display:none}
+.student-award-month summary small{color:var(--muted);font-weight:600}
+.student-award-month .student-award-list{margin-top:12px}
+.achievement-award-search-results{display:grid;gap:8px;margin-top:12px}
+.achievement-award-search-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}
+.achievement-award-search-result>div{display:grid;gap:3px;min-width:0}
+.achievement-award-search-result b{color:var(--green-deep)}
+.achievement-award-search-result small{color:var(--muted);font-size:11px}
+.achievement-award-admin-student{margin-top:14px}
+.achievement-award-admin-head{padding:17px;border:1px solid rgba(181,139,59,.3);border-radius:16px;background:linear-gradient(125deg,var(--green-soft),var(--surface))}
+.achievement-award-admin-head h4{margin:0 0 9px;color:var(--green-deep);font-size:18px}
+.achievement-award-admin-meta{display:flex;gap:8px;flex-wrap:wrap}
+.achievement-award-admin-meta span{padding:6px 9px;border-radius:9px;background:var(--surface);font-size:11px;color:var(--muted)}
+.achievement-award-month-admin{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+.achievement-award-month-admin-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.achievement-award-month-admin-head h4{margin:0;color:var(--green-deep)}
+.achievement-award-month-actions,.achievement-award-item-actions{display:flex;gap:7px;flex-wrap:wrap}
+.achievement-award-admin-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--line)}
+.achievement-award-admin-item:first-child{border-top:0}
+.achievement-award-admin-item>div:nth-child(2){flex:1;min-width:0}
+.achievement-award-admin-item b{display:block;color:var(--green-deep);font-size:13px}
+.achievement-award-admin-item small{display:block;color:var(--muted);font-size:11px;line-height:1.7}
+.achievement-award-audit{margin-top:18px;padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--green-soft)}
+.achievement-award-audit h4{margin:0 0 10px;color:var(--green-deep)}
+.achievement-award-audit-item{padding:8px 0;border-top:1px solid var(--line);font-size:11px;line-height:1.8}
+.achievement-award-audit-item:first-of-type{border-top:0}
+.achievement-award-audit-item b{color:var(--green-deep)}
+.monthly-awards-preview{margin-top:14px;padding:15px;border:1px solid rgba(181,139,59,.35);border-radius:15px;background:var(--surface)}
+.monthly-awards-preview h4{margin:0 0 10px;color:var(--green-deep)}
+.monthly-awards-preview .preview-award-row{padding:8px 0;border-top:1px solid var(--line);font-size:12px;line-height:1.7}
+.monthly-awards-preview .preview-award-row:first-of-type{border-top:0}
+.monthly-awards-preview .preview-award-row b{color:var(--green-deep)}
+.dark .student-award-message,.dark .student-award-notification{background:linear-gradient(135deg,#352f1d,#20392d);color:#e8dfc7}
+.dark .student-awards-panel,.dark .student-all-awards-view,.dark .achievement-award-month-admin{background:#192a22}
+.dark .student-award-item,.dark .achievement-award-search-result{background:#20392d}
+.dark .achievement-award-admin-head,.dark .achievement-award-audit{background:#20392d}
+@media(max-width:650px){
+ .topbar-actions{gap:6px}.header-admin-link{padding:8px 9px;font-size:11px}
+ .leaderboard-podium{gap:6px}.leaderboard-podium-item{padding:10px 6px}.leaderboard-podium-item b{font-size:10px}
+ .student-award-item,.achievement-award-admin-item{align-items:flex-start}
+ .student-awards-panel,.student-all-awards-view{padding:15px}
+ .achievement-award-search-result{align-items:flex-start;flex-direction:column}
+ .achievement-award-month-admin-head{align-items:flex-start}
+}
