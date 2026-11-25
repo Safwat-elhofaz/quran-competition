@@ -35,6 +35,7 @@ Deno.serve(async (req: Request) => {
       lookup: { max: 10, window: 600 },
       issue: { max: 20, window: 600 },
       verify: { max: 60, window: 600 },
+      acknowledge_awards: { max: 30, window: 600 },
     } as const;
     if (!Object.hasOwn(rules, action)) return response({ error: "نوع الطلب غير صحيح." }, 400);
 
@@ -75,8 +76,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const publicRule = rules[action as keyof typeof rules];
-    const maxRequests = adminUserId && action !== "lookup" ? 500 : publicRule.max;
-    const bucketIdentity = adminUserId && action !== "lookup" ? "admin:" + adminUserId : "ip:" + ip;
+    const adminElevatedAction = action === "issue" || action === "verify";
+    const maxRequests = adminUserId && adminElevatedAction ? 500 : publicRule.max;
+    const bucketIdentity = adminUserId && adminElevatedAction ? "admin:" + adminUserId : "ip:" + ip;
     const bucketKey = await sha256(action + ":" + bucketIdentity);
     const { data: permitted, error: limitError } = await client.rpc("consume_public_request_limit", {
       p_bucket_key: bucketKey, p_max_requests: maxRequests, p_window_seconds: publicRule.window,
@@ -85,7 +87,7 @@ Deno.serve(async (req: Request) => {
     if (!permitted) return response({ error: "تم تجاوز عدد المحاولات المسموح. حاول مرة أخرى بعد قليل." }, 429);
 
     let rpcName: string;
-    let rpcArgs: Record<string, string>;
+    let rpcArgs: Record<string, unknown>;
     if (action === "lookup") {
       const code = String(body?.p_student_code || "").trim();
       if (!/^[0-9]{5}$/.test(code)) return response({ error: "الكود لازم يكون خمسة أرقام." }, 400);
@@ -94,10 +96,21 @@ Deno.serve(async (req: Request) => {
       const code = String(body?.p_student_code || "").trim();
       if (!/^[0-9]{5}$/.test(code)) return response({ error: "كود الطالب غير صحيح." }, 400);
       rpcName = "get_or_create_achievement_card"; rpcArgs = { p_student_code: code };
-    } else {
+    } else if (action === "verify") {
       const number = String(body?.p_card_number || "").trim();
       if (!/^[0-9]{8}$/.test(number)) return response({ error: "رقم الكارت لازم يكون 8 أرقام." }, 400);
       rpcName = "verify_achievement_card"; rpcArgs = { p_card_number: number };
+    } else {
+      const code = String(body?.p_student_code || "").trim();
+      const awardIds = body?.p_award_ids;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!/^[0-9]{5}$/.test(code)) return response({ error: "كود الطالب غير صحيح." }, 400);
+      if (!Array.isArray(awardIds) || awardIds.length < 1 || awardIds.length > 100 ||
+          !awardIds.every((id: unknown) => typeof id === "string" && uuidPattern.test(id))) {
+        return response({ error: "بيانات مشاهدة الأوسمة غير صحيحة." }, 400);
+      }
+      rpcName = "student_acknowledge_achievement_awards";
+      rpcArgs = { p_student_code: code, p_award_ids: awardIds };
     }
 
     const { data, error } = await client.rpc(rpcName, rpcArgs);
