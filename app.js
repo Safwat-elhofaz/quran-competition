@@ -601,7 +601,19 @@ async function loadManualAdjustmentHistory(students,admins){
     return "<tr><td>"+new Date(x.created_at).toLocaleString("ar-EG")+"</td><td>"+(student?esc(student.full_name)+" ("+esc(student.student_code)+")":"طالب")+"</td><td>"+change+"</td><td>"+before+" ← "+after+"</td><td>"+esc(d.adjustment_reason||"—")+"</td><td>"+esc(adminMap.get(x.admin_user_id)||"مشرف")+"</td></tr>";
   }).join(""):'<tr><td colspan="6">لا توجد تعديلات يدوية حتى الآن</td></tr>';
 }
-function normalizeStudentName(value){return String(value||"").trim().toLocaleLowerCase("ar")}
+function normalizeStudentName(value){
+ return String(value??"")
+  .normalize("NFKC")
+  .replace(/[أإآٱ]/g,"ا")
+  .replace(/\s+/g," ")
+  .trim()
+  .toLocaleLowerCase("ar");
+}
+function matchesStudentName(fullName,query){
+ const normalizedName=normalizeStudentName(fullName);
+ const terms=normalizeStudentName(query).split(" ").filter(Boolean);
+ return terms.length>0&&terms.every(term=>normalizedName.includes(term));
+}
 function adminRankFor(rows,id){
   const sorted=[...rows].sort((a,b)=>Number(b.total_points||0)-Number(a.total_points||0)||String(a.full_name||"").localeCompare(String(b.full_name||""),"ar"));
   let rank=0,previous=null;
@@ -724,7 +736,7 @@ function renderStudentManagement(){
   }
  }
  if(!query){$("studentManagementResults").innerHTML='<p class="muted-note">ابدأ بكتابة اسم الطالب أو كوده للبحث.</p>'+addForm;return}
- const rows=dashboardStudents.filter(x=>x.full_name.toLocaleLowerCase("ar").includes(normalizedQuery)||x.student_code.includes(query)).slice(0,30);
+ const rows=dashboardStudents.filter(x=>matchesStudentName(x.full_name,normalizedQuery)||x.student_code.includes(query)).slice(0,30);
  const results=rows.length?rows.map(x=>{
   const total=Number(dashboardRanked.find(y=>y.student_id===x.id)?.total_points||0);
   return "<article class='student-search-card'><div class='student-search-card-info'><button type='button' class='admin-student-name-link' data-select-admin-student='"+x.id+"'>"+esc(x.full_name)+"</button><span>الكود: "+esc(x.student_code)+"</span><span>المجموعة: "+esc(x.group_level||"غير محددة")+" · الحالة: "+(x.is_active?"نشط":"موقوف")+"</span><b class='student-current-total'>الإجمالي الحالي: "+total.toLocaleString("en-US")+" نقطة</b></div><button type='button' class='secondary admin-select-profile' data-select-admin-student='"+x.id+"'>عرض بيانات الطالب</button></article>"
