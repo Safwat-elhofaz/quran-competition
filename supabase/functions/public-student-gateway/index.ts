@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
       const awardIds = body?.p_award_ids;
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!/^[0-9]{5}$/.test(code)) return response({ error: "كود الطالب غير صحيح." }, 400);
-      if (!Array.isArray(awardIds) || awardIds.length < 1 || awardIds.length > 100 ||
+      if (!Array.isArray(awardIds) || awardIds.length < 1 || awardIds.length > 500 ||
           !awardIds.every((id: unknown) => typeof id === "string" && uuidPattern.test(id))) {
         return response({ error: "بيانات مشاهدة الأوسمة غير صحيحة." }, 400);
       }
