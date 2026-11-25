@@ -1,6 +1,11 @@
 const SUPABASE_URL="https://rjbiahkjfmhexexssczg.supabase.co";
 const SUPABASE_KEY="sb_publishable_4_pS_PYlIamm6eXOWzGmTg_IY0mN-oR";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+async function publicGateway(action,payload){
+ const response=await fetch(SUPABASE_URL+"/functions/v1/public-student-gateway",{method:"POST",headers:{"apikey":SUPABASE_KEY,"Content-Type":"application/json"},body:JSON.stringify({action,...payload})});
+ let body={};try{body=await response.json()}catch(e){}
+ return {data:body.data??null,error:response.ok?null:new Error(body.error||"تعذر تنفيذ الطلب حاليًا.")};
+}
 const $=id=>document.getElementById(id);
 function ensureSaaiTargetGroup(){
   ["editStudentGroup","newStudentGroup"].forEach(id=>{
@@ -23,6 +28,7 @@ let dashboardRankById=new Map();
 let selectedAdminStudentId=null;
 let adminStudentProfileOpenId=null;
 let adminStudentEntries=null;
+let adminStudentCards=[];
 let adminStudentEntriesLoading=false;
 let currentAchievementData=null;
 function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"});if(id==="homeView")loadPublicLeaderboards()}
@@ -65,6 +71,8 @@ async function loadPublicLeaderboards(){
   const {data,error}=await db.rpc("public_leaderboards");
   if(error)throw error;
   publicLeaderboardData=data||{overall:[],levels:{}};
+  const updatedAt=$("leaderboardUpdatedAt");
+  if(updatedAt)updatedAt.textContent=publicLeaderboardData.updated_at?"آخر تحديث فعلي للترتيب: "+new Date(publicLeaderboardData.updated_at).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"}):"تاريخ آخر تحديث غير متاح حاليًا.";
   $("overallLeaderboard").innerHTML=leaderboardRows(publicLeaderboardData.overall||[]);
   renderLevelLeaderboard();
   await loadPublicChallengeArchive();
@@ -72,6 +80,7 @@ async function loadPublicLeaderboards(){
   $("overallLeaderboard").innerHTML='<tr><td colspan="3" class="leaderboard-empty">تعذر تحميل الترتيب حاليًا.</td></tr>';
   $("levelLeaderboard").innerHTML='<tr><td colspan="3" class="leaderboard-empty">تعذر تحميل الترتيب حاليًا.</td></tr>';
   $("leaderboardMessage").textContent="تأكد من اتصال الإنترنت وحاول تحديث الصفحة.";
+  if($("leaderboardUpdatedAt"))$("leaderboardUpdatedAt").textContent="تعذر تحميل تاريخ آخر تحديث.";
  }
 }
 $("leaderboardLevelSelect").onchange=renderLevelLeaderboard;
@@ -110,7 +119,7 @@ $("studentForm").onsubmit=async e=>{
  const button=$("studentForm").querySelector("button");button.disabled=true;button.textContent="جاري البحث...";
  msg("studentMessage","جاري التحقق من الكود...");
  try{
-  const {data,error}=await db.rpc("student_lookup_by_code",{p_student_code:code});if(error)throw error;
+  const {data,error}=await publicGateway("lookup",{p_student_code:code});if(error)throw error;
   const result=Array.isArray(data)?data[0]:data;
   if(!result||!result.student){msg("studentMessage","الكود غير صحيح أو غير مسجل.",true);return}
   renderStudentProfile(result);$("studentForm").classList.add("hidden");$("studentProfile").classList.remove("hidden");$("studentMessage").textContent="";
@@ -172,7 +181,7 @@ async function createAchievementExportStage(studentDataOverride,studentCodeOverr
  if(!window.QRCode)throw Error("تعذر تحميل مولّد رمز QR. حدّث الصفحة وحاول مرة أخرى.");
  const studentCode=studentCodeOverride||sourceData?.student?.student_code;
  if(!studentCode)throw Error("كود الطالب غير متاح لإنشاء كارت الإنجاز.");
- const {data:cardRows,error:cardError}=await db.rpc("get_or_create_achievement_card",{p_student_code:String(studentCode)});
+ const {data:cardRows,error:cardError}=await publicGateway("issue",{p_student_code:String(studentCode)});
  if(cardError)throw cardError;
  const cardData=Array.isArray(cardRows)?cardRows[0]:cardRows;
  if(!cardData?.card_number||!cardData?.snapshot)throw Error("تعذر إنشاء رقم كارت الإنجاز.");
@@ -428,7 +437,7 @@ async function searchAchievementCardAdmin(){
  if(!/^[0-9]{8}$/.test(number)){msg("achievementCardAdminMessage","رقم الكارت لازم يكون 8 أرقام.",true);return}
  msg("achievementCardAdminMessage","جاري البحث عن الكارت...");
  try{
-  const {data,error}=await db.rpc("verify_achievement_card",{p_card_number:number});if(error)throw error;
+  const {data,error}=await publicGateway("verify",{p_card_number:number});if(error)throw error;
   if(!data?.found){msg("achievementCardAdminMessage","لا يوجد كارت مسجل بهذا الرقم.",true);return}
   const active=data.status==="active";
   $("achievementCardAdminResult").innerHTML="<div class='achievement-admin-card'><div><small>اسم الطالب</small><strong>"+esc(data.student_name)+"</strong></div><div><small>رقم الكارت</small><strong dir='ltr'>"+esc(data.card_number)+"</strong></div><div><small>الحالة الحالية</small><strong class='"+(active?"status-active":"achievement-status-revoked")+"'>"+(active?"معتمد وصالح":"ملغي الاعتماد")+"</strong></div><div><small>تاريخ الإصدار</small><strong>"+new Date(data.issued_at).toLocaleString("ar-EG")+"</strong></div>"+(active?"<label for='achievementCardRevokeReason'>سبب إلغاء الاعتماد (اختياري)</label><textarea id='achievementCardRevokeReason' rows='2' maxlength='500' placeholder='اكتب سبب الإلغاء إن وجد'></textarea><button type='button' class='danger-btn' id='achievementCardRevokeBtn'>إلغاء اعتماد الكارت</button>":"<p class='muted-note'>هذا الكارت غير صالح حاليًا، ويمكن إعادة اعتماده عند الحاجة.</p><button type='button' class='primary' id='achievementCardReactivateBtn'>إعادة اعتماد الكارت</button>")+"</div>";
@@ -527,6 +536,18 @@ function renderAdminStudentProfile(student){
  const monthlyBars=months.map(m=>"<div class='admin-performance-bar-col'><div class='admin-performance-bar-value'>"+(m.value?m.value.toLocaleString("en-US"):"")+"</div><div class='admin-performance-bar-track'><i style='height:"+Math.max(m.value?4:0,Math.abs(m.value)/monthMax*100)+"%;' class='"+(m.value<0?"is-negative":"")+"'></i></div><small>"+esc(m.label)+"</small></div>").join("");
  const recent=entries.slice(-8).reverse();
  const recentRows=recent.length?recent.map(e=>"<tr><td>"+new Date(e.created_at).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})+"</td><td class='"+(Number(e.points_delta)<0?"negative-points":"positive-points")+"'>"+(Number(e.points_delta)>0?"+":"")+Number(e.points_delta).toLocaleString("en-US")+"</td><td>"+esc(e.adjustment_reason||"تعديل نقاط")+"</td><td>"+Number(e.new_total??0).toLocaleString("en-US")+"</td></tr>").join(""):"<tr><td colspan='4'>لا توجد عمليات مسجلة لهذا الطالب حتى الآن.</td></tr>";
+ const journeyEvents=[];
+ if(student.created_at)journeyEvents.push({date:student.created_at,milestone:true,title:"بداية الرحلة",detail:"تم تسجيل الطالب في صفوة الحفاظ"});
+ const journeyLevels=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300]];
+ entries.forEach(e=>{
+  const delta=Number(e.points_delta)||0,after=Number(e.new_total??0),before=Number(e.previous_total??(after-delta));
+  journeyEvents.push({date:e.created_at,milestone:false,delta,title:delta>0?"إضافة نقاط":delta<0?"خصم نقاط":"تسوية رصيد",detail:(e.adjustment_reason||"عملية نقاط")+" · الرصيد بعد العملية: "+after.toLocaleString("en-US")+" نقطة"});
+  journeyLevels.forEach(([name,threshold])=>{if(before<threshold&&after>=threshold)journeyEvents.push({date:e.created_at,milestone:true,title:"تحقيق المستوى "+name,detail:"وصل رصيد الطالب إلى "+threshold+" نقطة"})});
+ });
+ journeyEvents.sort((a,b)=>new Date(a.date)-new Date(b.date));
+ const journeyHtml=journeyEvents.length?journeyEvents.slice(-40).reverse().map(ev=>"<article class='student-journey-event "+(ev.milestone?"is-milestone":"")+(ev.delta<0?" is-deduction":"")+"'><i></i><div><b>"+esc(ev.title)+"</b><p>"+esc(ev.detail)+"</p><small>"+new Date(ev.date).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})+"</small></div></article>").join(""):"<p class='muted-note'>لا توجد أحداث مسجلة في رحلة الطالب حتى الآن.</p>";
+ const cards=Array.isArray(adminStudentCards)?adminStudentCards:[];
+ const cardsHtml=cards.length?cards.map((card,index)=>"<article class='achievement-history-item'><div class='achievement-history-main'><b>الإصدار "+(index+1)+"</b><strong dir='ltr'>"+esc(card.card_number)+"</strong><span class='achievement-history-status "+(card.status==="active"?"is-active":"is-revoked")+"'>"+(card.status==="active"?"معتمد":"ملغي الاعتماد")+"</span></div><small>تاريخ الإصدار: "+new Date(card.issued_at).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})+"</small>"+(card.revoked_at?"<small>تاريخ الإلغاء: "+new Date(card.revoked_at).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})+"</small>":"")+(card.revoke_reason?"<p>سبب الإلغاء: "+esc(card.revoke_reason)+"</p>":"")+"</article>").join(""):"<p class='muted-note'>لا توجد كروت إنجاز صادرة لهذا الطالب حتى الآن.</p>";
  return "<div class='admin-student-profile-view'>"+
   "<button type='button' class='secondary admin-profile-back' data-back-admin-student>← الرجوع لنتائج البحث</button>"+
   "<section class='admin-student-summary'><div class='eyebrow'>الملف الشخصي للطالب</div><h2>"+esc(student.full_name)+"</h2><div class='admin-student-meta'><span>الكود: "+esc(student.student_code)+"</span><span>المجموعة المستهدفة: "+esc(group)+"</span><span>الحالة: "+(student.is_active?"نشط":"موقوف")+"</span><span>مستوى النقاط: "+esc(currentLevel)+"</span></div><div class='admin-student-total'><small>إجمالي النقاط الحالي</small><strong>"+total.toLocaleString("en-US")+"</strong><span>نقطة</span></div></section>"+
@@ -536,6 +557,8 @@ function renderAdminStudentProfile(student){
   "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
   "</div><div class='admin-student-points-control'><label for='studentPoints-"+student.id+"'>عدد النقاط</label><input id='studentPoints-"+student.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+student.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+student.id+"' "+disabled+">إضافة نقاط</button></div></div><div class='student-search-card-actions admin-profile-actions'><button type='button' class='history-btn' data-edit-student='"+student.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+student.id+"'>تعديل المجموعة</button><button type='button' class='danger-btn' data-delete-student='"+student.id+"'>حذف الطالب</button></div></section>"+
   "<section class='admin-performance-section'><h3>مؤشرات الأداء</h3><p class='muted-note'>المؤشرات محسوبة من سجل عمليات النقاط الفعلي المتاح للطالب.</p><div class='admin-performance-kpis'><article><small>نقاط آخر 7 أيام</small><strong>"+last7.toLocaleString("en-US")+"</strong></article><article><small>نقاط الشهر الحالي</small><strong>"+monthPoints.toLocaleString("en-US")+"</strong></article><article><small>متوسط اليوم خلال أسبوع</small><strong>"+(last7/7).toFixed(1)+"</strong></article><article><small>عمليات إضافة النقاط</small><strong>"+positiveEntries.toLocaleString("en-US")+"</strong></article><article><small>إجمالي المضاف</small><strong>"+earned.toLocaleString("en-US")+"</strong></article><article><small>إجمالي المخصوم</small><strong>"+deducted.toLocaleString("en-US")+"</strong></article></div><p class='admin-performance-trend'>"+esc(trendText)+"</p></section>"+
+  "<section class='admin-performance-section admin-journey-section'><h3>رحلة إنجاز الطالب</h3><p class='muted-note'>تسلسل زمني لعمليات النقاط والمستويات التي وصل إليها الطالب، دون تغيير أي رصيد.</p><div class='student-journey-timeline'>"+journeyHtml+"</div></section>"+
+  "<section class='admin-performance-section admin-card-history-section'><h3>سجل كروت الإنجاز</h3><p class='muted-note'>كل إصدار محفوظ برقم مستقل وتاريخ وحالة اعتماد، والإصدارات السابقة لا تُلغى تلقائيًا.</p><div class='achievement-history-list'>"+cardsHtml+"</div></section>"+
   "<section class='admin-performance-section'><h3>تطور النقاط اليومي</h3><p class='muted-note'>صافي النقاط المسجلة يوميًا خلال آخر 14 يومًا.</p><div class='admin-performance-chart'>"+dailyBars+"</div></section>"+
   "<section class='admin-performance-section'><h3>معدل الأداء الشهري</h3><p class='muted-note'>صافي النقاط المسجلة خلال آخر 6 أشهر.</p><div class='admin-performance-chart admin-month-chart'>"+monthlyBars+"</div></section>"+
   "<section class='admin-performance-section'><h3>ترتيب الطالب</h3><div class='admin-performance-ranks'><article><small>الترتيب العام</small><strong>"+(overallRank??"—")+"</strong><span>من "+allRows.length+" طالب نشط</span></article><article><small>ترتيبه في المجموعة</small><strong>"+(groupRank??"—")+"</strong><span>"+esc(group)+" · "+groupRows.length+" طالب</span></article><article><small>ترتيبه في مستوى النقاط</small><strong>"+(levelRank??"—")+"</strong><span>"+esc(currentLevel)+" · "+levelRows.length+" طالب</span></article></div></section>"+
@@ -581,14 +604,18 @@ function renderStudentManagement(){
  $("studentManagementResults").innerHTML=results+addForm;
 }
 async function loadAdminStudentProfile(id){
- adminStudentEntriesLoading=true;adminStudentEntries=null;renderStudentManagement();
+ adminStudentEntriesLoading=true;adminStudentEntries=null;adminStudentCards=[];renderStudentManagement();
  try{
   const r=await db.from("point_entries").select("created_at,points_delta,entry_type,previous_total,new_total,adjustment_reason,competition_id,weekly_challenge_id").eq("student_id",id).order("created_at",{ascending:true});
   if(r.error)throw r.error;
   adminStudentEntries=r.data||[];
+  const cardsResult=await db.rpc("admin_student_achievement_cards",{p_student_id:id});
+  if(cardsResult.error)throw cardsResult.error;
+  adminStudentCards=cardsResult.data||[];
  }catch(error){
-  adminStudentEntries=[];
-  msg("studentManagementMessage","تعذر تحميل سجل النقاط: "+error.message,true);
+  if(adminStudentEntries===null)adminStudentEntries=[];
+  adminStudentCards=[];
+  msg("studentManagementMessage","تعذر تحميل سجل الطالب بالكامل: "+error.message,true);
  }finally{
   adminStudentEntriesLoading=false;
   if(selectedAdminStudentId===id)renderStudentManagement();
