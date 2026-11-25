@@ -397,7 +397,7 @@ $("allStudentsAccordion").addEventListener("toggle",()=> $("studentsCountButton"
 async function loadDashboard(){
   try{
     const [s,a,c,w,t,adminProfiles]=await Promise.all([
-      db.from("students").select("id,student_code,full_name,is_active,group_level").order("full_name"),
+      db.from("students").select("id,student_code,full_name,is_active,group_level,created_at").order("full_name"),
       db.from("admin_profiles").select("user_id",{count:"exact",head:true}).eq("is_active",true),
       activeMonthly(),activeWeekly(),
       db.from("student_lifetime_totals").select("student_id,full_name,student_code,is_active,total_points"),
