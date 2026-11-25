@@ -609,7 +609,7 @@ async function loadAdminStudentProfile(id){
   const r=await db.from("point_entries").select("created_at,points_delta,entry_type,previous_total,new_total,adjustment_reason,competition_id,weekly_challenge_id").eq("student_id",id).order("created_at",{ascending:true});
   if(r.error)throw r.error;
   adminStudentEntries=r.data||[];
-  const cardsResult=await db.rpc("admin_student_achievement_cards",{p_student_id:id});
+  const cardsResult=await db.from("achievement_cards").select("card_number,student_name,status,issued_at,revoked_at,revoke_reason").eq("student_id",id).order("issued_at",{ascending:true});
   if(cardsResult.error)throw cardsResult.error;
   adminStudentCards=cardsResult.data||[];
  }catch(error){
