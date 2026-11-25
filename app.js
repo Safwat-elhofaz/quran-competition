@@ -98,7 +98,7 @@ function renderStudentAwardHistory(awards){
 }
 function awardGreetingText(awards){
  const messages=(awards||[]).map(a=>{
-  const group=a.target_group_at_award?" ("+a.target_group_at_award+")":"";
+  const group=a.target_group_at_award?(a.achievement_key==="higher_group_leader"?" (الهدف: "+a.target_group_at_award+")":" ("+a.target_group_at_award+")"):"";
   return ({
    overall_first:"حققت المركز الأول على الترتيب العام؛ إنجاز يستحق الفخر، فحافظ على القمة.",
    overall_2_3:"وصلت إلى المركز الثاني أو الثالث على الترتيب العام؛ واصل اجتهادك.",
