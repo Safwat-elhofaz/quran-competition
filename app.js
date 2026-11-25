@@ -38,6 +38,7 @@ let selectedAchievementAdminStudentId=null;
 let achievementAdminAwards=[];
 let achievementAdminAudit=[];
 let achievementAdminLoading=false;
+let achievementAdminError=null;
 let currentAchievementData=null;
 function show(id){views.forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"});if(id==="homeView")loadPublicLeaderboards()}
 function msg(id,t,bad=false){$(id).textContent=t;$(id).style.color=bad?"#f1a39a":"#b58b3b"}
@@ -754,7 +755,7 @@ function renderAchievementAwardSearch(){
  }).join(""):'<p class="muted-note">لم يتم العثور على طالب مطابق.</p>';
 }
 async function loadAchievementAwardAdminStudent(id){
- achievementAdminLoading=true;renderAchievementAwardSearch();
+ achievementAdminError=null;achievementAdminLoading=true;renderAchievementAwardSearch();
  try{
   const [awards,logs]=await Promise.all([
    db.from("achievement_awards").select("id,student_id,student_name,student_code,competition_id,competition_title,month_start,achievement_key,medal_tier,target_group_at_award,rank_at_award,points_at_award,status,earned_at,revoked_at,revoked_by,revoke_reason,restored_at,restored_by,restore_reason,greeting_seen_at").eq("student_id",id).order("month_start",{ascending:false}).order("earned_at",{ascending:false}),
@@ -763,9 +764,7 @@ async function loadAchievementAwardAdminStudent(id){
   if(awards.error)throw awards.error;if(logs.error)throw logs.error;
   achievementAdminAwards=awards.data||[];achievementAdminAudit=logs.data||[];
  }catch(error){
-  achievementAdminAwards=[];achievementAdminAudit=[];
-  const host=$("achievementAwardAdminStudent");
-  if(host)host.innerHTML='<p class="message">'+esc("تعذر تحميل الأوسمة: "+error.message)+'</p>';
+  achievementAdminAwards=[];achievementAdminAudit=[];achievementAdminError=error.message;
  }finally{
   achievementAdminLoading=false;renderAchievementAwardSearch();
  }
@@ -796,12 +795,13 @@ function renderAchievementAwardAdminStudent(student){
   }).join("");
   return '<section class="achievement-award-month-admin"><div class="achievement-award-month-admin-head"><h4>'+esc(awardMonthLabel(items[0]))+'</h4><div class="achievement-award-month-actions">'+monthActions+'</div></div>'+rows+'</section>';
  }).join("")||'<p class="muted-note">لا توجد أوسمة مسجلة لهذا الطالب حتى الآن.</p>';
+ const monthContent=achievementAdminError?'<p class="message">'+esc("تعذر تحميل سجل الأوسمة: "+achievementAdminError)+'</p>':monthHtml;
  const adminMap=new Map(dashboardAdminProfiles.map(a=>[a.user_id,a.display_name]));
  const auditHtml=achievementAdminAudit.map(log=>{
   const d=log.details||{},label=log.action==="REVOKE"?"إلغاء وسام":log.action==="REACTIVATE"?"استعادة وسام":log.action;
   return '<div class="achievement-award-audit-item"><b>'+esc(label)+'</b> · '+new Date(log.created_at).toLocaleString("ar-EG")+' · '+esc(adminMap.get(log.admin_user_id)||"مشرف")+'<br>'+esc(d.medal_tier||"")+' · '+esc(d.competition_title||"")+'<br>السبب: '+esc(d.reason||"—")+'</div>';
  }).join("")||'<p class="muted-note">لا توجد عمليات إلغاء أو استعادة لهذا الطالب.</p>';
- host.innerHTML='<div class="achievement-award-admin-head"><h4>'+esc(student.full_name)+'</h4><div class="achievement-award-admin-meta"><span>كود الطالب: '+esc(student.student_code)+'</span><span>النقاط: '+total.toLocaleString("en-US")+'</span><span>المستوى: '+esc(level(total))+'</span><span>المجموعة المستهدفة: '+esc(student.group_level||"غير محددة")+'</span></div></div>'+monthHtml+'<section class="achievement-award-audit"><h4>سجل عمليات الأوسمة</h4>'+auditHtml+'</section><p id="achievementAwardAdminMessage" class="message" aria-live="polite"></p>';
+ host.innerHTML='<div class="achievement-award-admin-head"><h4>'+esc(student.full_name)+'</h4><div class="achievement-award-admin-meta"><span>كود الطالب: '+esc(student.student_code)+'</span><span>النقاط: '+total.toLocaleString("en-US")+'</span><span>المستوى: '+esc(level(total))+'</span><span>المجموعة المستهدفة: '+esc(student.group_level||"غير محددة")+'</span></div></div>'+monthContent+'<section class="achievement-award-audit"><h4>سجل عمليات الأوسمة</h4>'+auditHtml+'</section><p id="achievementAwardAdminMessage" class="message" aria-live="polite"></p>';
 }
 async function manageAchievementAward(action,awardId,competitionId){
  const studentId=selectedAchievementAdminStudentId;
@@ -834,13 +834,13 @@ async function manageAchievementAward(action,awardId,competitionId){
  }
 }
 $("achievementAwardStudentSearch").oninput=()=>{
- selectedAchievementAdminStudentId=null;achievementAdminAwards=[];achievementAdminAudit=[];achievementAdminLoading=false;renderAchievementAwardSearch();
+ selectedAchievementAdminStudentId=null;achievementAdminAwards=[];achievementAdminAudit=[];achievementAdminError=null;achievementAdminLoading=false;renderAchievementAwardSearch();
 };
 $("achievementAwardSearchResults").addEventListener("click",async e=>{
  const back=e.target.closest("[data-award-admin-back]");
- if(back){selectedAchievementAdminStudentId=null;achievementAdminAwards=[];achievementAdminAudit=[];renderAchievementAwardSearch();return}
+ if(back){selectedAchievementAdminStudentId=null;achievementAdminAwards=[];achievementAdminAudit=[];achievementAdminError=null;renderAchievementAwardSearch();return}
  const select=e.target.closest("[data-award-select-student]");
- if(select){selectedAchievementAdminStudentId=select.dataset.awardSelectStudent;achievementAdminLoading=true;renderAchievementAwardSearch();await loadAchievementAwardAdminStudent(selectedAchievementAdminStudentId)}
+ if(select){selectedAchievementAdminStudentId=select.dataset.awardSelectStudent;achievementAdminError=null;achievementAdminLoading=true;renderAchievementAwardSearch();await loadAchievementAwardAdminStudent(selectedAchievementAdminStudentId)}
 });
 $("achievementAwardAdminStudent").addEventListener("click",async e=>{
  const back=e.target.closest("[data-award-admin-back]");
