@@ -1039,7 +1039,7 @@ async function previewMonthlyAwards(competitionId=null){
    const status=x.existingStatus?(x.existingStatus==="active"?"موجود بالفعل":"موجود لكنه ملغي"):(x.notExpected?"وسام سابق يحتاج مراجعة":"استحقاق متوقع");
    return '<div class="preview-award-row"><b>'+esc(x.student.full_name)+'</b> · '+esc(x.tier)+'<br>'+esc(awardAchievementLabel(x.key))+(x.target_group_at_award?" · المجموعة المستهدفة: "+esc(x.target_group_at_award):"")+(x.rank?' · المركز '+x.rank:"")+' · '+Number(x.points||0).toLocaleString("en-US")+' نقطة<br><small>'+status+(x.notExpected?" · لا يظهر ضمن الاستحقاقات الحالية":"")+'</small></div>';
   }).join("");
-  const reviewNote=competition.awards_revision_pending?
+  const reviewNote=competition.status==="archived"&&competition.awards_revision_pending?
    '<section class="monthly-awards-reapproval"><p><b>هذا التحدي أُعيد فتحه ثم إغلاقه للتصحيح.</b> الأوسمة القديمة لم تتغير تلقائيًا. الاعتماد يضيف الاستحقاقات الجديدة فقط؛ أما الأوسمة القديمة التي لم تعد مستحقة فتراجعها الإدارة وتلغيها من قسم إدارة الأوسمة.</p><button id="approveReopenedAwardsBtn" class="primary" type="button">اعتماد الاستحقاقات بعد التصحيح</button></section>':"";
   panel.innerHTML='<h4>معاينة أوسمة '+esc(title)+'</h4><p class="muted-note">المعاينة للعرض والمراجعة فقط، ولا تمنح أي وسام بمجرد فتحها.</p><p><b>'+preview.length+'</b> بندًا للمراجعة وفق البيانات الحالية.</p>'+(rowsHtml||'<p class="muted-note">لا توجد استحقاقات ظاهرة حاليًا.</p>')+reviewNote;
   const approve=$("approveReopenedAwardsBtn");
