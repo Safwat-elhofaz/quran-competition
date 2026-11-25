@@ -982,8 +982,8 @@ async function previewMonthlyAwards(competitionId=null){
   const students=new Map((studentsResult.data||[]).map(s=>[s.id,s]));
   const life=new Map((lifetimeResult.data||[]).map(s=>[s.student_id,Number(s.total_points)||0]));
   const existingAwards=existingResult.data||[];
-  const isGoalKey=key=>key==="target_reached"||key==="target_exceeded";
-  const keyOf=(studentId,key,target)=>studentId+"|"+key+"|"+(isGoalKey(key)?(target||""):"");
+  const isGroupSpecificKey=key=>["target_reached","target_exceeded","target_group_leader","higher_group_leader"].includes(key);
+  const keyOf=(studentId,key,target)=>studentId+"|"+key+"|"+(isGroupSpecificKey(key)?(target||""):"");
   const existingMap=new Map(existingAwards.map(a=>[keyOf(a.student_id,a.achievement_key,a.target_group_at_award),a]));
   const preview=[],previewKeys=new Set();
   const addPreview=x=>{
