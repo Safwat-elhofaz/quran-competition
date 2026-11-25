@@ -155,10 +155,10 @@ function attachStudentAwards(data){
  };
  if(newAwards.length&&"IntersectionObserver" in window){
   const observer=new IntersectionObserver(entries=>{
-   if(document.visibilityState==="visible"&&entries.some(entry=>entry.isIntersecting&&entry.intersectionRatio>=0.5)){
+   if(document.visibilityState==="visible"&&entries.some(entry=>entry.isIntersecting)){
     observer.disconnect();acknowledgeNewAwards();
    }
-  },{threshold:0.5});
+  },{threshold:0});
   observer.observe(notice);
  }else if(newAwards.length){
   notice.addEventListener("click",acknowledgeNewAwards,{once:true});
