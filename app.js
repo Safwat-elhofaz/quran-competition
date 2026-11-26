@@ -23,7 +23,7 @@ function ensureSaaiTargetGroup(){
 }
 ensureSaaiTargetGroup();
 const views=["homeView","studentView","adminLoginView","changePasswordView","adminView"];
-const levels=[{points:75,name:"الساعي"},{points:100,name:"البرونزي"},{points:150,name:"الفضي"},{points:200,name:"الذهبي"},{points:250,name:"الماسي"},{points:300,name:"الملكي"}];
+const levels=[{points:75,name:"الساعي"},{points:100,name:"البرونزي"},{points:150,name:"الفضي"},{points:200,name:"الذهبي"},{points:250,name:"الماسي"},{points:300,name:"الملكي"},{points:400,name:"السلطاني"}];
 let pendingAdmin=null;
 let dashboardStudents=[];
 let dashboardRanked=[];
@@ -54,7 +54,7 @@ function dateText(value){if(!value)return "—";return new Date(value+"T00:00:00
 
 let publicLeaderboardData=null;
 function targetGroupThreshold(name){
- return {"الساعي":75,"البرونزي":100,"الفضي":150,"الذهبي":200,"الماسي":250,"الملكي":300}[name]||null;
+ return {"الساعي":75,"البرونزي":100,"الفضي":150,"الذهبي":200,"الماسي":250,"الملكي":300,"السلطاني":400}[name]||null;
 }
 function awardTierClass(tier){
  return {"وسام التاج":"medal-crown","وسام النخبة":"medal-elite","وسام الريادة":"medal-leadership","وسام التميز":"medal-excellence","وسام التفوق":"medal-superiority","وسام التقدير":"medal-appreciation","وسام الاستحقاق":"medal-deserved"}[tier]||"medal-deserved";
@@ -402,11 +402,11 @@ async function exportAdminStudentAchievementCard(studentId,mode,button){
 
 function renderStudentProfile(data){
  const s=data.student,monthly=data.monthly,weekly=data.weekly,total=Number(s.total_points)||0,next=s.next_level_points==null?null:Number(s.next_level_points),performance=data.performance||{},targetRank=Number(performance.group_rank)||0,targetSize=Number(performance.group_size)||0,targetStatus=s.target_group_status||"لم تُحدد مجموعة مستهدفة";
- const base=total>=300?300:total>=250?250:total>=200?200:total>=150?150:total>=100?100:total>=75?75:0;
+ const base=total>=400?400:total>=300?300:total>=250?250:total>=200?200:total>=150?150:total>=100?100:total>=75?75:0;
  const progress=next===null?100:Math.max(0,Math.min(100,((total-base)/(next-base))*100));
  const weeklyPoints=Number(weekly?.total_points)||0,monthlyPoints=Number(monthly?.total_points)||0;
  const maxChallenge=Math.max(weeklyPoints,monthlyPoints,1);
- const tiers=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300]];
+ const tiers=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300],["السلطاني",400]];
  const tiersHtml=tiers.map(([name,points])=>'<div class="student-tier '+(total>=points?'is-reached':'')+'"><i></i><span>'+name+'</span><b>'+points+'</b></div>').join("");
  const history=Array.isArray(performance.weekly_history)?performance.weekly_history:[],neighbors=Array.isArray(performance.group_students)?performance.group_students:[];
  const orderedNeighbors=[...neighbors].sort((a,b)=>Number(b.points)-Number(a.points)||(a.name<b.name?-1:a.name>b.name?1:0));
@@ -641,7 +641,7 @@ function renderAdminStudentQuickView(student){
  "<div class='admin-student-points-control'><label for='studentPoints-"+student.id+"'>عدد النقاط</label><input id='studentPoints-"+student.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+student.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+student.id+"' "+disabled+">إضافة نقاط</button></div></div>"+
  "<div class='student-search-card-actions admin-profile-actions'><button type='button' class='history-btn' data-edit-student='"+student.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+student.id+"'>تعديل المجموعة</button></div>"+
  "<form id='editStudentForm' class='stack student-editor hidden'><h4>تعديل اسم الطالب</h4><input id='editStudentId' type='hidden'><label for='editStudentName'>الاسم الجديد</label><input id='editStudentName' maxlength='150' required><div class='actions'><button class='primary'>حفظ الاسم</button><button type='button' id='cancelStudentEdit' class='secondary'>إلغاء</button></div></form>"+
- "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
+ "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='السلطاني'>السلطاني</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
  "<button type='button' class='primary admin-open-profile' data-open-admin-profile='"+student.id+"'>فتح ملف الطالب ←</button>"+
  "<div class='admin-achievement-actions'><button type='button' class='history-btn' data-admin-card-image='"+student.id+"'>🖼️ تنزيل صورة الكارت</button><button type='button' class='history-btn' data-admin-card-pdf='"+student.id+"'>🖨️ طباعة / حفظ PDF</button></div></section></article>";
 }
@@ -678,7 +678,7 @@ function renderAdminStudentProfile(student){
  const recentRows=recent.length?recent.map(e=>"<tr><td>"+new Date(e.created_at).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})+"</td><td class='"+(Number(e.points_delta)<0?"negative-points":"positive-points")+"'>"+(Number(e.points_delta)>0?"+":"")+Number(e.points_delta).toLocaleString("en-US")+"</td><td>"+esc(e.adjustment_reason||"تعديل نقاط")+"</td><td>"+Number(e.new_total??0).toLocaleString("en-US")+"</td></tr>").join(""):"<tr><td colspan='4'>لا توجد عمليات مسجلة لهذا الطالب حتى الآن.</td></tr>";
  const journeyEvents=[];
  if(student.created_at)journeyEvents.push({date:student.created_at,milestone:true,title:"بداية الرحلة",detail:"تم تسجيل الطالب في صفوة الحفاظ"});
- const journeyLevels=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300]];
+ const journeyLevels=[["الساعي",75],["البرونزي",100],["الفضي",150],["الذهبي",200],["الماسي",250],["الملكي",300],["السلطاني",400]];
  entries.forEach(e=>{
   const delta=Number(e.points_delta)||0,after=Number(e.new_total??0),before=Number(e.previous_total??(after-delta));
   journeyEvents.push({date:e.created_at,milestone:false,delta,title:delta>0?"إضافة نقاط":delta<0?"خصم نقاط":"تسوية رصيد",detail:(e.adjustment_reason||"عملية نقاط")+" · الرصيد بعد العملية: "+after.toLocaleString("en-US")+" نقطة"});
@@ -694,7 +694,7 @@ function renderAdminStudentProfile(student){
   "<section class='admin-student-tools'><h3>إدارة الطالب</h3>"+
   "<div class='admin-profile-editors'>"+
   "<form id='editStudentForm' class='stack student-editor hidden'><h4>تعديل اسم الطالب</h4><input id='editStudentId' type='hidden'><label for='editStudentName'>الاسم الجديد</label><input id='editStudentName' maxlength='150' required><div class='actions'><button class='primary'>حفظ الاسم</button><button type='button' id='cancelStudentEdit' class='secondary'>إلغاء</button></div></form>"+
-  "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
+  "<form id='editStudentGroupForm' class='stack student-editor hidden'><h4>تعديل المجموعة المستهدفة</h4><input id='editStudentGroupId' type='hidden'><label for='editStudentGroup'>المجموعة المستهدفة الجديدة</label><select id='editStudentGroup' required><option value=''>اختر المجموعة</option><option value='السلطاني'>السلطاني</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><div class='actions'><button class='primary'>حفظ المجموعة</button><button type='button' id='cancelStudentGroupEdit' class='secondary'>إلغاء</button></div></form>"+
   "</div><div class='admin-student-points-control'><label for='studentPoints-"+student.id+"'>عدد النقاط</label><input id='studentPoints-"+student.id+"' data-points-value type='number' min='0' step='1' placeholder='اكتب العدد' "+disabled+"><div class='student-points-actions'><button type='button' class='primary' data-set-total='"+student.id+"' "+disabled+">تعديل الإجمالي</button><button type='button' class='secondary' data-add-points='"+student.id+"' "+disabled+">إضافة نقاط</button></div></div><div class='student-search-card-actions admin-profile-actions'><button type='button' class='history-btn' data-edit-student='"+student.id+"'>تعديل الاسم</button><button type='button' class='history-btn' data-edit-student-group='"+student.id+"'>تعديل المجموعة</button><button type='button' class='danger-btn' data-delete-student='"+student.id+"'>حذف الطالب</button></div></section>"+
   "<section class='admin-performance-section'><h3>مؤشرات الأداء</h3><p class='muted-note'>المؤشرات محسوبة من سجل عمليات النقاط الفعلي المتاح للطالب.</p><div class='admin-performance-kpis'><article><small>نقاط آخر 7 أيام</small><strong>"+last7.toLocaleString("en-US")+"</strong></article><article><small>نقاط الشهر الحالي</small><strong>"+monthPoints.toLocaleString("en-US")+"</strong></article><article><small>متوسط اليوم خلال أسبوع</small><strong>"+(last7/7).toFixed(1)+"</strong></article><article><small>عمليات إضافة النقاط</small><strong>"+positiveEntries.toLocaleString("en-US")+"</strong></article><article><small>إجمالي المضاف</small><strong>"+earned.toLocaleString("en-US")+"</strong></article><article><small>إجمالي المخصوم</small><strong>"+deducted.toLocaleString("en-US")+"</strong></article></div><p class='admin-performance-trend'>"+esc(trendText)+"</p></section>"+
   "<section class='admin-performance-section admin-journey-section'><h3>رحلة إنجاز الطالب</h3><p class='muted-note'>تسلسل زمني لعمليات النقاط والمستويات التي وصل إليها الطالب، دون تغيير أي رصيد.</p><div class='student-journey-timeline'>"+journeyHtml+"</div></section>"+
@@ -718,7 +718,7 @@ function renderStudentAddForm(query){
  const exact=!!query&&dashboardStudents.some(x=>normalizeStudentName(x.full_name)===normalized);
  const looksLikeCode=/^[0-9٠-٩۰-۹]+$/.test(query||"");
  const prefill=query&&!exact&&!looksLikeCode?query:"";
- return "<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>اكتب اسم الطالب واختر المجموعة؛ سيتم توليد كود فريد من خمسة أرقام تلقائيًا.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(prefill)+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>";
+ return "<div class='add-student-area'><h4>إضافة طالب جديد</h4><p class='muted-note'>اكتب اسم الطالب واختر المجموعة؛ سيتم توليد كود فريد من خمسة أرقام تلقائيًا.</p><form id='addStudentForm' class='stack'><label for='newStudentName'>اسم الطالب</label><input id='newStudentName' autocomplete='off' maxlength='150' value='"+esc(prefill)+"' required><label for='newStudentGroup'>اختيار المجموعة المستهدفة</label><select id='newStudentGroup' required><option value=''>اختر المجموعة</option><option value='السلطاني'>السلطاني</option><option value='الملكي'>الملكي</option><option value='الماسي'>الماسي</option><option value='الذهبي'>الذهبي</option><option value='الفضي'>الفضي</option><option value='البرونزي'>البرونزي</option><option value='الساعي'>الساعي</option></select><button class='primary'>إضافة الطالب وتوليد الكود</button></form></div>";
 }
 function renderStudentManagement(){
  const query=$("studentAdminSearch").value.trim();
