@@ -1085,7 +1085,7 @@ function renderPeriodControls(monthly,weekly){
   $("monthlyStatus").textContent=monthly?"نشط — من "+dateText(monthly.month_start)+" إلى "+dateText(monthly.month_end):"لا يوجد تحدٍ شهري نشط";
   if($("monthlyStartDate")){$("monthlyStartDate").value=monthly?.month_start||"";$("monthlyStartDate").disabled=false;}
   if($("monthlyEndDate"))$("monthlyEndDate").value=monthly?.month_end||"";
-  $("monthlyStartBtn").classList.toggle("hidden",!!monthly);$("monthlyEndBtn").classList.toggle("hidden",!monthly);$("monthlySaveDatesBtn").classList.toggle("hidden",!monthly);$("monthlyReopenBtn").classList.toggle("hidden",!!monthly||!selectedReopenCompetitionId);
+  $("monthlyStartBtn").classList.toggle("hidden",!!monthly||!!selectedReopenCompetitionId);$("monthlyEndBtn").classList.toggle("hidden",!monthly);$("monthlySaveDatesBtn").classList.toggle("hidden",!monthly);$("monthlyReopenBtn").classList.toggle("hidden",!!monthly||!selectedReopenCompetitionId);
   $("weeklyStatus").textContent=weekly?"نشط — الأسبوع "+weekName(weekly.week_number)+" — من "+dateText(weekly.week_start)+" إلى "+(weekly.week_end?dateText(weekly.week_end):"نهاية غير محددة"):"لا يوجد أسبوع نشط حاليًا";
   $("weeklyEndBtn").classList.toggle("hidden",!weekly);
   $("weeklyStartBtn").classList.toggle("hidden",!!weekly||!monthly);
@@ -1122,7 +1122,7 @@ async function loadHistory(monthly){
   }).join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
 }
 $("weeklyHistory").onclick=handleHistoryClick;$("weeklyProgress").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
-async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;if(b.dataset.historyType==="monthly_reopen"){selectedReopenCompetitionId=b.dataset.historyId;$("monthlyStartDate").value=b.dataset.reopenStart||"";$("monthlyEndDate").value=b.dataset.reopenEnd||"";$("monthlyReopenBtn").classList.remove("hidden");$("monthlyReopenBtn").scrollIntoView({behavior:"smooth",block:"center"});msg("pointsMessage","تم اختيار الدورة المؤرشفة. راجع التواريخ ثم اضغط إعادة فتح الدورة.");return}if(b.dataset.historyType==="monthly_awards"){await previewMonthlyAwards(b.dataset.historyId);return}await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
+async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;if(b.dataset.historyType==="monthly_reopen"){selectedReopenCompetitionId=b.dataset.historyId;$("monthlyStartBtn").classList.add("hidden");$("monthlyStartDate").value=b.dataset.reopenStart||"";$("monthlyEndDate").value=b.dataset.reopenEnd||"";$("monthlyReopenBtn").classList.remove("hidden");$("monthlyReopenBtn").scrollIntoView({behavior:"smooth",block:"center"});msg("pointsMessage","تم اختيار الدورة المؤرشفة. راجع التواريخ ثم اضغط إعادة فتح الدورة.");return}if(b.dataset.historyType==="monthly_awards"){await previewMonthlyAwards(b.dataset.historyId);return}await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
 async function showPeriodResults(type,id){
   try{
     const monthly=type==="monthly",column=monthly?"competition_id":"weekly_challenge_id",view=monthly?"student_monthly_totals":"student_weekly_totals";
