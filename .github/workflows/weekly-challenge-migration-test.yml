@@ -1,0 +1,68 @@
+name: Weekly challenge migration test
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20261126180000_complete_weekly_challenge_admin.sql"
+      - "app.js"
+      - "index.html"
+      - "tests/weekly-challenge-admin-test.sql"
+      - ".github/workflows/weekly-challenge-migration-test.yml"
+  push:
+    branches:
+      - feature/challenge-admin-completion
+    paths:
+      - "supabase/migrations/20261126180000_complete_weekly_challenge_admin.sql"
+      - "app.js"
+      - "index.html"
+      - "tests/weekly-challenge-admin-test.sql"
+      - ".github/workflows/weekly-challenge-migration-test.yml"
+
+jobs:
+  postgres-migration-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Test weekly date control defaults
+        run: node tests/weekly-date-controls-test.js
+      - name: Check duplicate HTML IDs
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class IdCollector(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = []
+              def handle_starttag(self, tag, attrs):
+                  self.ids.extend(value for name, value in attrs if name == "id")
+
+          parser = IdCollector()
+          parser.feed(Path("index.html").read_text(encoding="utf-8"))
+          duplicates = [item for item, count in Counter(parser.ids).items() if count > 1]
+          if duplicates:
+              raise SystemExit("Duplicate HTML IDs: " + ", ".join(duplicates))
+          print(f"HTML IDs are unique ({len(parser.ids)} checked)")
+          PY
+      - name: Run migration and behavior tests in disposable PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/weekly-challenge-admin-test.sql
