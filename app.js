@@ -1078,6 +1078,7 @@ $("monthlyAwardsPreviewBtn").onclick=()=>{
  previewMonthlyAwards();
 };
 
+let lastRenderedActiveWeekId=null;
 function weekName(n){return ["","الأول","الثاني","الثالث","الرابع","الخامس"][n]||String(n)}
 function renderPeriodControls(monthly,weekly){
   $("monthlyAwardsPreviewBtn").classList.toggle("hidden",!monthly);
@@ -1089,8 +1090,19 @@ function renderPeriodControls(monthly,weekly){
   $("weeklyStatus").textContent=weekly?"نشط — الأسبوع "+weekName(weekly.week_number)+" — من "+dateText(weekly.week_start)+" إلى "+(weekly.week_end?dateText(weekly.week_end):"نهاية غير محددة"):"لا يوجد أسبوع نشط حاليًا";
   $("weeklyEndBtn").classList.toggle("hidden",!weekly);
   $("weeklyStartBtn").classList.toggle("hidden",!!weekly||!monthly);
-  if(weekly){$("weeklyStartDate").value=weekly.week_start;$("weeklyEndDate").value=weekly.week_end||"";}
-  else{if(!$("weeklyStartDate").value)$("weeklyStartDate").value=localDate();if(!$("weeklyEndDate").value)$("weeklyEndDate").value=localDate();}
+  const activeWeekId=weekly?.id||null;
+  if(weekly){
+    $("weeklyStartDate").value=weekly.week_start;
+    $("weeklyEndDate").value=weekly.week_end||"";
+  }else if(lastRenderedActiveWeekId){
+    // An active week has just ended; clear its dates so they cannot silently carry over.
+    $("weeklyStartDate").value=localDate();
+    $("weeklyEndDate").value=localDate();
+  }else{
+    if(!$("weeklyStartDate").value)$("weeklyStartDate").value=localDate();
+    if(!$("weeklyEndDate").value)$("weeklyEndDate").value=localDate();
+  }
+  lastRenderedActiveWeekId=activeWeekId;
   $("weeklyStartDate").disabled=false;$("weeklyEndDate").disabled=false;
   $("weeklySaveDatesBtn").classList.toggle("hidden",!weekly);
   $("weeklyStartBtn").textContent="بدء الأسبوع المحدد"
