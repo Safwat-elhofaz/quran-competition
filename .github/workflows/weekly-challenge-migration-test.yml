@@ -1,0 +1,39 @@
+name: Weekly challenge migration test
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20261126180000_complete_weekly_challenge_admin.sql"
+      - "tests/weekly-challenge-admin-test.sql"
+      - ".github/workflows/weekly-challenge-migration-test.yml"
+  push:
+    branches:
+      - feature/challenge-admin-completion
+    paths:
+      - "supabase/migrations/20261126180000_complete_weekly_challenge_admin.sql"
+      - "tests/weekly-challenge-admin-test.sql"
+      - ".github/workflows/weekly-challenge-migration-test.yml"
+
+jobs:
+  postgres-migration-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run migration and behavior tests in disposable PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/weekly-challenge-admin-test.sql
