@@ -160,8 +160,6 @@ as $function$
 begin
   if old.status <> 'archived' and new.status = 'archived' then
     if tg_table_name = 'weekly_challenges' then
-      delete from public.challenge_result_snapshots
-      where period_type = 'weekly' and period_id = new.id;
       insert into public.challenge_result_snapshots(period_type,period_id,student_id,student_name,total_points,rank)
       select 'weekly',new.id,t.student_id,t.full_name,t.total_points,
              row_number() over(order by t.total_points desc,t.full_name asc)::integer
