@@ -73,6 +73,17 @@ CREATE VIEW public.student_weekly_totals AS
 SELECT weekly_challenge_id, student_id, full_name, total_points
 FROM public.weekly_totals_fixture;
 
+CREATE TABLE public.monthly_totals_fixture (
+  competition_id uuid NOT NULL,
+  student_id uuid NOT NULL,
+  full_name text NOT NULL,
+  total_points integer NOT NULL
+);
+
+CREATE VIEW public.student_monthly_totals AS
+SELECT competition_id, student_id, full_name, total_points
+FROM public.monthly_totals_fixture;
+
 CREATE FUNCTION public.capture_challenge_results()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -88,6 +99,15 @@ BEGIN
       FROM public.student_weekly_totals t
       WHERE t.weekly_challenge_id = new.id
       ON CONFLICT(period_type,period_id,student_id) DO NOTHING;
+    ELSIF tg_table_name = 'competitions' THEN
+      INSERT INTO public.challenge_result_snapshots(period_type,period_id,student_id,student_name,total_points,rank)
+      SELECT 'monthly',new.id,t.student_id,t.full_name,t.total_points,
+             row_number() over(order by t.total_points desc,t.full_name asc)::integer
+      FROM public.student_monthly_totals t
+      WHERE t.competition_id = new.id
+      ON CONFLICT(period_type,period_id,student_id) DO UPDATE
+        SET student_name=excluded.student_name,total_points=excluded.total_points,
+            rank=excluded.rank,captured_at=now();
     END IF;
   END IF;
   RETURN new;
@@ -96,6 +116,10 @@ $function$;
 
 CREATE TRIGGER capture_weekly_challenge_results
 AFTER UPDATE OF status ON public.weekly_challenges
+FOR EACH ROW EXECUTE FUNCTION public.capture_challenge_results();
+
+CREATE TRIGGER capture_monthly_challenge_results
+AFTER UPDATE OF status ON public.competitions
 FOR EACH ROW EXECUTE FUNCTION public.capture_challenge_results();
 
 INSERT INTO public.competitions(id,month_start,month_end,title,status)
@@ -108,10 +132,16 @@ INSERT INTO public.weekly_totals_fixture(weekly_challenge_id,student_id,full_nam
 ('20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',10),
 ('20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',5);
 
+INSERT INTO public.monthly_totals_fixture(competition_id,student_id,full_name,total_points) VALUES
+('10000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',100),
+('10000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',80);
+
 INSERT INTO public.challenge_result_snapshots(id,period_type,period_id,student_id,student_name,total_points,rank)
 OVERRIDING SYSTEM VALUE VALUES
 (501,'weekly','20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',10,1),
-(502,'weekly','20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',5,2);
+(502,'weekly','20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',5,2),
+(503,'monthly','10000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',100,1),
+(504,'monthly','10000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',80,2);
 
 SELECT set_config('request.jwt.claim.sub','30000000-0000-0000-0000-000000000001',false);
 SELECT set_config('test.is_active_admin','true',false);
@@ -230,6 +260,31 @@ BEGIN
       RAISE;
     END IF;
   END;
+
+  PERFORM set_config('test.is_active_admin','true',false);
+  UPDATE public.monthly_totals_fixture SET total_points=75
+  WHERE competition_id='10000000-0000-0000-0000-000000000001'
+    AND student_id='40000000-0000-0000-0000-000000000001';
+
+  UPDATE public.competitions SET status='archived'
+  WHERE id='10000000-0000-0000-0000-000000000001';
+
+  SELECT total_points,rank INTO v_total,v_rank
+  FROM public.challenge_result_snapshots
+  WHERE period_type='monthly'
+    AND period_id='10000000-0000-0000-0000-000000000001'
+    AND student_id='40000000-0000-0000-0000-000000000001';
+
+  IF v_total <> 75 OR v_rank <> 2 THEN
+    RAISE EXCEPTION 'Monthly snapshot behavior changed unexpectedly';
+  END IF;
+
+  IF (SELECT id FROM public.challenge_result_snapshots
+      WHERE period_type='monthly'
+        AND period_id='10000000-0000-0000-0000-000000000001'
+        AND student_id='40000000-0000-0000-0000-000000000001') <> 503 THEN
+    RAISE EXCEPTION 'Monthly snapshot ID was not preserved';
+  END IF;
 END;
 $test$;
 
