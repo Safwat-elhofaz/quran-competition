@@ -73,6 +73,7 @@ as $function$
 declare
   v_admin uuid := (select auth.uid());
   v_week public.weekly_challenges;
+  v_month public.competitions;
 begin
   if v_admin is null or not coalesce((select private.is_active_admin()), false) then
     raise exception 'غير مصرح بإعادة فتح التحدي الأسبوعي';
