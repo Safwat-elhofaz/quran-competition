@@ -1091,7 +1091,7 @@ function renderPeriodControls(monthly,weekly){
   $("weeklyStartBtn").classList.toggle("hidden",!!weekly||!monthly);
   if(weekly){$("weeklyStartDate").value=weekly.week_start;$("weeklyEndDate").value=weekly.week_end||"";}
   else{if(!$("weeklyStartDate").value)$("weeklyStartDate").value=localDate();if(!$("weeklyEndDate").value)$("weeklyEndDate").value=localDate();}
-  $("weeklyStartDate").disabled=!!weekly;$("weeklyEndDate").disabled=!!weekly;
+  $("weeklyStartDate").disabled=false;$("weeklyEndDate").disabled=false;
   $("weeklySaveDatesBtn").classList.toggle("hidden",!weekly);
   $("weeklyStartBtn").textContent="بدء الأسبوع المحدد"
 }
