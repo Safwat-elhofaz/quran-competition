@@ -541,7 +541,7 @@ async function loadDashboard(){
     if(selectedAdminStudentId)loadAdminStudentProfile(selectedAdminStudentId);
     await loadManualAdjustmentHistory(s.data,adminProfiles.data||[]);
      await loadAchievementCardAdminHistory(adminProfiles.data||[]);
-    renderPeriodControls(c,w);await loadHistory(c)
+    renderPeriodControls(c,w);await loadHistory(c);await loadAssistantManagement(c)
   }catch(e){msg("studentManagementMessage","تعذر تحميل البيانات: "+e.message,true)}
 }
 
@@ -1190,6 +1190,90 @@ $("monthlyEndBtn").onclick=async()=>{
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الشهري: "+e.message,true)}
 };
 
+
+
+let assistantMemberships=[],assistantCurrentCompetition=null,assistantCurrentTotals=new Map(),assistantSelectedStudentId=null,assistantProfileEntries=[];
+function assistantMessage(message,bad=false){const el=$("assistantManagementMessage");if(el){el.textContent=message||"";el.style.color=bad?"#f1a39a":"#b58b3b"}}
+function assistantPointsFor(id){return Number(assistantCurrentTotals.get(id)||0)}
+function renderAssistantList(){
+ const host=$("assistantListResults");if(!host)return;
+ const raw=$("assistantListSearch").value.trim(),query=normalizeStudentName(raw),code=normalizeCardNumber(raw);
+ const rows=assistantMemberships.filter(m=>m.is_active).map(m=>({membership:m,student:dashboardStudents.find(s=>s.id===m.student_id)})).filter(x=>x.student)
+ .filter(x=>!raw||normalizeStudentName(x.student.full_name).includes(query)||String(x.student.student_code||"").includes(code))
+ .sort((x,y)=>assistantPointsFor(y.student.id)-assistantPointsFor(x.student.id)||String(x.student.full_name).localeCompare(String(y.student.full_name),"ar"));
+ host.innerHTML=rows.length?rows.map(x=>"<article class='assistant-list-item'><button type='button' class='assistant-list-open' data-assistant-open='"+x.student.id+"'><span><b>"+esc(x.student.full_name)+"</b><small>الكود: "+esc(x.student.student_code)+"</small></span><strong>"+assistantPointsFor(x.student.id).toLocaleString("en-US")+" نقطة</strong></button></article>").join(""):"<p class='muted-note'>"+(assistantMemberships.some(m=>m.is_active)?"لا توجد نتائج مطابقة.":"لم تتم إضافة مساعدين حتى الآن.")+"</p>";
+}
+function renderAssistantAddResults(){
+ const host=$("assistantAddResults");if(!host)return;
+ const raw=$("assistantAddSearch").value.trim(),query=normalizeStudentName(raw),code=normalizeCardNumber(raw);
+ if(!raw){host.innerHTML="<p class='muted-note'>ابدأ بكتابة اسم الطالب أو كوده.</p>";return}
+ const rows=dashboardStudents.filter(s=>normalizeStudentName(s.full_name).includes(query)||String(s.student_code||"").includes(code)).slice(0,12);
+ host.innerHTML=rows.length?rows.map(s=>{
+  const exists=assistantMemberships.some(m=>m.student_id===s.id&&m.is_active);
+  return "<article class='assistant-add-result'><div><b>"+esc(s.full_name)+"</b><small>الكود: "+esc(s.student_code)+"</small></div>"+(exists?"<span class='assistant-already-added'>مضاف بالفعل</span>":"<button type='button' class='secondary' data-assistant-add='"+s.id+"'>إضافة مساعد</button>")+"</article>";
+ }).join(""):"<p class='muted-note'>لا يوجد طالب مطابق للبحث.</p>";
+}
+async function loadAssistantManagement(monthly=null){
+ if(!monthly)monthly=await activeMonthly();
+ const [membersResult,entriesResult]=await Promise.all([
+  db.from("assistant_memberships").select("id,student_id,is_active,added_at,removed_at").eq("is_active",true),
+  monthly?db.from("assistant_point_entries").select("student_id,points_delta").eq("competition_id",monthly.id):Promise.resolve({data:[],error:null})
+ ]);
+ if(membersResult.error)throw membersResult.error;if(entriesResult.error)throw entriesResult.error;
+ assistantMemberships=membersResult.data||[];assistantCurrentCompetition=monthly;assistantCurrentTotals=new Map();
+ (entriesResult.data||[]).forEach(x=>assistantCurrentTotals.set(x.student_id,(assistantCurrentTotals.get(x.student_id)||0)+Number(x.points_delta||0)));
+ const cycle=$("assistantCycleStatus");
+ if(cycle)cycle.textContent=monthly?"الدورة الحالية: "+(monthly.title||"التحدي الشهري")+" · "+dateText(monthly.month_start)+" – "+dateText(monthly.month_end):"لا توجد دورة نشطة حاليًا؛ إضافة المساعدين متاحة، لكن تسجيل النقاط متوقف.";
+ renderAssistantList();renderAssistantAddResults();
+ if(assistantSelectedStudentId)await loadAssistantProfile(assistantSelectedStudentId);else $("assistantProfile").classList.add("hidden");
+}
+async function loadAssistantProfile(studentId){
+ const host=$("assistantProfile"),student=dashboardStudents.find(s=>s.id===studentId);if(!host||!student)return;
+ host.classList.remove("hidden");host.innerHTML="<p class='muted-note'>جاري تحميل ملف المساعد وسجل النقاط...</p>";
+ try{
+  const [entriesResult,adminsResult]=await Promise.all([
+   db.from("assistant_point_entries").select("id,competition_id,operation_type,points_value,points_delta,previous_total,new_total,created_by,created_at,competition:competitions(title,month_start,month_end)").eq("student_id",studentId).order("created_at",{ascending:false}),
+   db.from("admin_profiles").select("user_id,display_name").eq("is_active",true)
+  ]);
+  if(entriesResult.error)throw entriesResult.error;if(adminsResult.error)throw adminsResult.error;
+  assistantProfileEntries=entriesResult.data||[];
+  const adminMap=new Map((adminsResult.data||[]).map(x=>[x.user_id,x.display_name]));
+  const currentId=assistantCurrentCompetition?.id,currentTotal=assistantPointsFor(studentId);
+  const currentEntries=assistantProfileEntries.filter(x=>x.competition_id===currentId);
+  const history=currentEntries.length?currentEntries.map(x=>"<tr><td>"+new Date(x.created_at).toLocaleString("ar-EG")+"</td><td>"+(x.operation_type==="add"?"إضافة نقاط":"تعديل الإجمالي")+"</td><td>"+Number(x.points_value).toLocaleString("en-US")+"</td><td>"+Number(x.previous_total).toLocaleString("en-US")+" ← "+Number(x.new_total).toLocaleString("en-US")+"</td><td>"+esc(adminMap.get(x.created_by)||"مشرف")+"</td></tr>").join(""):"<tr><td colspan='5'>لا توجد عمليات نقاط في الدورة الحالية.</td></tr>";
+  const archiveMap=new Map();
+  assistantProfileEntries.forEach(x=>{if(!x.competition_id||x.competition_id===currentId)return;const c=x.competition||{};if(!archiveMap.has(x.competition_id))archiveMap.set(x.competition_id,{title:c.title||"دورة سابقة",start:c.month_start,end:c.month_end,total:0});archiveMap.get(x.competition_id).total+=Number(x.points_delta||0)});
+  const archives=Array.from(archiveMap.values()).sort((x,y)=>String(y.start||"").localeCompare(String(x.start||""))).map(x=>"<article class='assistant-archive-item'><b>"+esc(x.title)+"</b><small>"+dateText(x.start)+" – "+dateText(x.end)+"</small><strong>"+x.total.toLocaleString("en-US")+" نقطة</strong></article>").join("")||"<p class='muted-note'>لا يوجد أرشيف نقاط سابق لهذا المساعد.</p>";
+  const canPoints=!!assistantCurrentCompetition;
+  host.innerHTML="<div class='assistant-profile-head'><div><div class='eyebrow'>ملف المساعد</div><h4>"+esc(student.full_name)+"</h4><p>كود الطالب: "+esc(student.student_code)+" · "+(student.is_active?"طالب نشط":"طالب موقوف")+"</p></div><button type='button' class='history-btn' data-assistant-remove='"+studentId+"'>إزالة من قائمة المساعدين</button></div><div class='assistant-current-total'><span>رصيد الدورة الحالية</span><strong>"+currentTotal.toLocaleString("en-US")+" نقطة</strong></div><section class='assistant-points-tools'><h4>إدارة نقاط المساعد</h4><label for='assistantPointsValue'>عدد النقاط</label><input id='assistantPointsValue' type='number' min='0' step='1' placeholder='اكتب العدد' "+(canPoints?"":"disabled")+"><div class='student-points-actions'><button type='button' class='primary' data-assistant-set='"+studentId+"' "+(canPoints?"":"disabled")+">تعديل الإجمالي</button><button type='button' class='secondary' data-assistant-points-add='"+studentId+"' "+(canPoints?"":"disabled")+">إضافة نقاط</button></div>"+(canPoints?"":"<p class='muted-note'>لا يمكن تسجيل نقاط قبل بدء دورة جديدة من إدارة التحديات.</p>")+"</section><section class='assistant-points-history'><h4>سجل عمليات الدورة الحالية</h4><div class='table-wrap'><table><thead><tr><th>التاريخ والوقت</th><th>العملية</th><th>القيمة</th><th>قبل ← بعد</th><th>الإداري</th></tr></thead><tbody>"+history+"</tbody></table></div></section><section class='assistant-archive'><h4>أرشيف نقاط الدورات السابقة</h4>"+archives+"</section>";
+ }catch(error){host.innerHTML="<p class='message'>تعذر تحميل ملف المساعد: "+esc(error.message)+"</p>"}
+}
+async function setAssistantMembership(studentId,action){
+ try{
+  const {error}=await db.rpc("admin_set_assistant_membership",{p_student_id:studentId,p_action:action});if(error)throw error;
+  if(action==="remove"){assistantSelectedStudentId=null;$("assistantProfile").classList.add("hidden")}
+  assistantMessage(action==="add"?"تمت إضافة المساعد بنجاح.":"تمت إزالة المساعد من القائمة الحالية، مع الاحتفاظ بسجلاته ونقاطه.");
+  await loadAssistantManagement(assistantCurrentCompetition);
+ }catch(error){assistantMessage("تعذر تنفيذ العملية: "+error.message,true)}
+}
+async function adjustAssistantPoints(studentId,mode){
+ const value=Number($("assistantPointsValue")?.value);
+ if(!Number.isInteger(value)||value<0||(mode==="add"&&value===0)){assistantMessage("اكتب عددًا صحيحًا مناسبًا للنقاط.",true);return}
+ try{
+  const {error}=await db.rpc("admin_adjust_assistant_points",{p_student_id:studentId,p_mode:mode,p_points:value});if(error)throw error;
+  assistantMessage(mode==="add"?"تمت إضافة النقاط بنجاح.":"تم تعديل إجمالي نقاط المساعد بنجاح.");
+  await loadAssistantManagement(assistantCurrentCompetition);
+ }catch(error){assistantMessage("تعذر تعديل نقاط المساعد: "+error.message,true)}
+}
+$("assistantListSearch").oninput=renderAssistantList;
+$("assistantAddSearch").oninput=renderAssistantAddResults;
+$("assistantListResults").onclick=e=>{const b=e.target.closest("[data-assistant-open]");if(!b)return;assistantSelectedStudentId=b.dataset.assistantOpen;loadAssistantProfile(assistantSelectedStudentId)};
+$("assistantAddResults").onclick=async e=>{const b=e.target.closest("[data-assistant-add]");if(b)await setAssistantMembership(b.dataset.assistantAdd,"add")};
+$("assistantProfile").onclick=async e=>{
+ const remove=e.target.closest("[data-assistant-remove]");if(remove){if(confirm("هل تريد إزالة هذا المساعد من القائمة الحالية؟ لن تُحذف نقاطه أو سجلاته."))await setAssistantMembership(remove.dataset.assistantRemove,"remove");return}
+ const add=e.target.closest("[data-assistant-points-add]");if(add){await adjustAssistantPoints(add.dataset.assistantPointsAdd,"add");return}
+ const set=e.target.closest("[data-assistant-set]");if(set)await adjustAssistantPoints(set.dataset.assistantSet,"set_total");
+};
 
 loadPublicLeaderboards();
 (async()=>{const r=await db.auth.getSession();if(r.data.session){try{await routeAdmin(r.data.session.user)}catch(e){await db.auth.signOut()}}})();
