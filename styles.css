@@ -347,7 +347,7 @@ button:disabled{opacity:.6;cursor:wait}
 .student-report-total span{font-size:13px;color:var(--muted)}.student-report-total strong{font-size:34px;color:var(--gold);font-variant-numeric:tabular-nums}.student-report-total small{margin-right:auto;color:var(--green);font-size:11px}
 .student-group-value{font-size:19px!important}
 .student-tier-card{margin-top:14px}
-.student-tier-scale{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:12px 0 20px}
+.student-tier-scale{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:12px 0 20px}
 .student-tier{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 3px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:10px;background:var(--green-soft)}
 .student-tier i{width:10px;height:10px;border:2px solid var(--gold);border-radius:50%}.student-tier b{font-size:10px}
 .student-tier.is-reached{color:var(--green-deep);border-color:var(--gold);background:rgba(181,139,59,.13)}.student-tier.is-reached i{background:var(--gold)}
