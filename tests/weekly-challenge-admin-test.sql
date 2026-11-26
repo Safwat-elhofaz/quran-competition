@@ -19,13 +19,12 @@ AS $$ SELECT coalesce(current_setting('test.is_active_admin', true), 'false') = 
 CREATE TABLE public.competitions (
   id uuid PRIMARY KEY,
   month_start date NOT NULL,
-  month_end date,
+  month_end date CHECK (month_end IS NULL OR month_end >= month_start),
   title text NOT NULL,
   status text NOT NULL CHECK (status IN ('active','archived')),
   created_at timestamptz NOT NULL DEFAULT now(),
   archived_at timestamptz,
   ended_by uuid REFERENCES auth.users(id),
-  month_end date CHECK (month_end IS NULL OR month_end >= month_start),
   awards_revision_pending boolean NOT NULL DEFAULT false,
   awards_finalized_at timestamptz
 );
