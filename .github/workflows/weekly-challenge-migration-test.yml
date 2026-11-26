@@ -38,6 +38,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check JavaScript syntax
         run: node --check app.js
+      - name: Test weekly date control defaults
+        run: node tests/weekly-date-controls-test.js
       - name: Check duplicate HTML IDs
         run: |
           python - <<'PY'
