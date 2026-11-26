@@ -13,6 +13,8 @@ on:
       - feature/challenge-admin-completion
     paths:
       - "supabase/migrations/20261126180000_complete_weekly_challenge_admin.sql"
+      - "app.js"
+      - "index.html"
       - "tests/weekly-challenge-admin-test.sql"
       - ".github/workflows/weekly-challenge-migration-test.yml"
 
