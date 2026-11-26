@@ -1116,26 +1116,32 @@ async function loadHistory(monthly){
   $("weeklyHistory").innerHTML=w.data.length?w.data.map(x=>"<tr><td>"+esc(x.title||("الأسبوع "+weekName(x.week_number)))+"</td><td>"+dateText(x.week_start)+" – "+(x.week_end?dateText(x.week_end):"—")+"</td><td>"+(x.status==="active"?"نشط":"منتهي")+"</td><td><button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button></td></tr>").join(""):'<tr><td colspan="4">لا يوجد سجل أسبوعي</td></tr>';
   $("monthlyHistory").innerHTML=c.data.length?c.data.map(month=>{
     const weeks=(w.data||[]).filter(x=>x.competition_id===month.id);
+    const latestWeekNumber=Math.max(0,...weeks.map(v=>Number(v.week_number)||0));
     const slots=Array.from({length:5},(_,i)=>{
       const n=i+1,x=weeks.find(v=>Number(v.week_number)===n);
-      return "<div class='archive-week-row'><div><b>الأسبوع "+weekName(n)+"</b><small>"+(x?dateText(x.week_start)+" – "+dateText(x.week_end):"لم يبدأ بعد")+"</small></div><span>"+(x?(x.status==="active"?"نشط":"مكتمل"):"غير متاح")+"</span>"+(x?"<button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button>":"")+"</div>";
-    }).join("");
+      const reopen=x&&x.status==="archived"&&month.status==="active"&&n===latestWeekNumber?" <button class='history-btn' data-history-type='weekly_reopen' data-history-id='"+x.id+"'>إعادة فتح الأسبوع</button>":"";
+      return "<div class='archive-week-row'><div><b>الأسبوع "+weekName(n)+"</b><small>"+(x?dateText(x.week_start)+" – "+dateText(x.week_end):"لم يبدأ بعد")+"</small></div><span>"+(x?(x.status==="active"?"نشط":"مكتمل"):"غير متاح")+"</span>"+(x?"<button class='history-btn' data-history-type='weekly' data-history-id='"+x.id+"'>النتائج</button>"+reopen:"")+"</div>";
+    }).join("");    }).join("");
     return "<tr><td>"+esc(month.title||"التحدي الشهري")+"</td><td>"+dateText(month.month_start)+" – "+dateText(month.month_end)+"</td><td>"+(month.status==="active"?"نشط":"منتهي")+"</td><td><details class='admin-month-archive'><summary>الأسابيع الخمسة</summary>"+slots+"</details>"+(month.status==="archived"?"<button class='history-btn' data-history-type='monthly' data-history-id='"+month.id+"'>نتائج الشهر</button>":"")+(month.status==="archived"&&month.awards_revision_pending?"<button class='history-btn' data-history-type='monthly_awards' data-history-id='"+month.id+"'>مراجعة أوسمة التحدي</button>":"")+(month.status==="archived"&&!month.awards_revision_pending&&month.awards_finalized_at?"<button class='history-btn' data-history-type='monthly_reopen' data-history-id='"+month.id+"' data-reopen-start='"+month.month_start+"' data-reopen-end='"+(month.month_end||"")+"'>إعادة فتح الدورة</button>":"")+"</td></tr>";
   }).join(""):'<tr><td colspan="4">لا يوجد سجل شهري</td></tr>'
 }
 $("weeklyHistory").onclick=handleHistoryClick;$("weeklyProgress").onclick=handleHistoryClick;$("monthlyHistory").onclick=handleHistoryClick;
-async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;if(b.dataset.historyType==="monthly_reopen"){selectedReopenCompetitionId=b.dataset.historyId;$("monthlyStartBtn").classList.add("hidden");$("monthlyStartDate").value=b.dataset.reopenStart||"";$("monthlyEndDate").value=b.dataset.reopenEnd||"";$("monthlyReopenBtn").classList.remove("hidden");$("monthlyReopenBtn").scrollIntoView({behavior:"smooth",block:"center"});msg("pointsMessage","تم اختيار الدورة المؤرشفة. راجع التواريخ ثم اضغط إعادة فتح الدورة.");return}if(b.dataset.historyType==="monthly_awards"){await previewMonthlyAwards(b.dataset.historyId);return}await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
+async function handleHistoryClick(e){const b=e.target.closest("[data-history-id]");if(!b)return;if(b.dataset.historyType==="weekly_reopen"){if(!confirm("إعادة فتح نفس الأسبوع؟ ستظل النقاط والنتائج المسجلة محفوظة، وسيُسمح باستكماله."))return;try{const user=await currentAdmin();const {error}=await db.rpc("admin_reopen_weekly_challenge",{p_weekly_challenge_id:b.dataset.historyId});if(error)throw error;await writeAudit(user,"reopen","weekly_challenge",b.dataset.historyId,{preserve_existing_points:true});msg("pointsMessage","تمت إعادة فتح نفس الأسبوع مع الاحتفاظ بالنقاط والنتائج السابقة.");await loadDashboard()}catch(error){msg("pointsMessage","تعذر إعادة فتح الأسبوع: "+error.message,true)}return}if(b.dataset.historyType==="monthly_reopen"){selectedReopenCompetitionId=b.dataset.historyId;$("monthlyStartBtn").classList.add("hidden");$("monthlyStartDate").value=b.dataset.reopenStart||"";$("monthlyEndDate").value=b.dataset.reopenEnd||"";$("monthlyReopenBtn").classList.remove("hidden");$("monthlyReopenBtn").scrollIntoView({behavior:"smooth",block:"center"});msg("pointsMessage","تم اختيار الدورة المؤرشفة. راجع التواريخ ثم اضغط إعادة فتح الدورة.");return}if(b.dataset.historyType==="monthly_awards"){await previewMonthlyAwards(b.dataset.historyId);return}await showPeriodResults(b.dataset.historyType,b.dataset.historyId)}
 async function showPeriodResults(type,id){
   try{
     const monthly=type==="monthly",column=monthly?"competition_id":"weekly_challenge_id",view=monthly?"student_monthly_totals":"student_weekly_totals";
-    const archived=await db.from("challenge_result_snapshots").select("student_id,student_name,total_points,rank").eq("period_type",type).eq("period_id",id).order("rank",{ascending:true});
-    if(archived.error)throw archived.error;
-    let rows=(archived.data||[]).map(x=>({student_id:x.student_id,full_name:x.student_name,total_points:x.total_points,rank:x.rank}));
-    if(!rows.length){
-      const period=monthly?await db.from("competitions").select("status").eq("id",id).maybeSingle():await db.from("weekly_challenges").select("status").eq("id",id).maybeSingle();
-      if(period.error)throw period.error;
-      if(period.data?.status!=="archived"){const live=await db.from(view).select("student_id,full_name,total_points").eq(column,id);if(live.error)throw live.error;rows=(live.data||[]).sort((a,b)=>b.total_points-a.total_points||a.full_name.localeCompare(b.full_name,"ar"));}
-    }else rows.sort((a,b)=>a.rank-b.rank||a.full_name.localeCompare(b.full_name,"ar"));
+    const period=monthly?await db.from("competitions").select("status").eq("id",id).maybeSingle():await db.from("weekly_challenges").select("status").eq("id",id).maybeSingle();
+    if(period.error)throw period.error;
+    let rows=[];
+    if(period.data?.status==="archived"){
+      const archived=await db.from("challenge_result_snapshots").select("student_id,student_name,total_points,rank").eq("period_type",type).eq("period_id",id).order("rank",{ascending:true});
+      if(archived.error)throw archived.error;
+      rows=(archived.data||[]).map(x=>({student_id:x.student_id,full_name:x.student_name,total_points:x.total_points,rank:x.rank})).sort((a,b)=>a.rank-b.rank||a.full_name.localeCompare(b.full_name,"ar"));
+    }else{
+      const live=await db.from(view).select("student_id,full_name,total_points").eq(column,id);
+      if(live.error)throw live.error;
+      rows=(live.data||[]).sort((a,b)=>b.total_points-a.total_points||a.full_name.localeCompare(b.full_name,"ar"));
+    }
     $("challengeResultsTitle").textContent=monthly?"نتائج التحدي الشهري":"نتائج التحدي الأسبوعي";
     let lastPoints=null,lastRank=0;
     $("challengeResultsTable").innerHTML=rows.length?rows.map((x,i)=>{const points=Number(x.total_points)||0,repeated=i>0&&points===lastPoints;if(!repeated)lastRank++;lastPoints=points;return "<tr><td>"+rankLabel(lastRank,repeated)+"</td><td>"+esc(x.full_name)+"</td><td>"+points.toLocaleString("en-US")+"</td></tr>"}).join(""):'<tr><td colspan="3">لا توجد نقاط مسجلة لهذا التحدي</td></tr>';
