@@ -144,7 +144,8 @@ VALUES ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-00000000
 
 INSERT INTO public.weekly_totals_fixture(weekly_challenge_id,student_id,full_name,total_points) VALUES
 ('20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',10),
-('20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',5);
+('20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',5),
+('20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000003','طالب جيم',0);
 
 INSERT INTO public.monthly_totals_fixture(competition_id,student_id,full_name,total_points) VALUES
 ('10000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',100),
@@ -154,6 +155,7 @@ INSERT INTO public.challenge_result_snapshots(id,period_type,period_id,student_i
 OVERRIDING SYSTEM VALUE VALUES
 (501,'weekly','20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',10,1),
 (502,'weekly','20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',5,2),
+(505,'weekly','20000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000003','طالب جيم',0,3),
 (503,'monthly','10000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','طالب ألف',100,1),
 (504,'monthly','10000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000002','طالب باء',80,2);
 
@@ -205,6 +207,20 @@ BEGIN
     RAISE EXCEPTION 'Weekly date update returned unexpected dates';
   END IF;
 
+  BEGIN
+    PERFORM public.admin_set_weekly_dates(
+      '20000000-0000-0000-0000-000000000001','2026-10-31','2026-11-08'
+    );
+    RAISE EXCEPTION 'Expected weekly dates outside the month to fail';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'Expected weekly dates outside the month to fail' THEN
+      RAISE;
+    END IF;
+    IF SQLERRM NOT LIKE '%داخل فترة%' THEN
+      RAISE;
+    END IF;
+  END;
+
   UPDATE public.weekly_totals_fixture SET total_points=4
   WHERE weekly_challenge_id='20000000-0000-0000-0000-000000000001'
     AND student_id='40000000-0000-0000-0000-000000000001';
@@ -238,6 +254,16 @@ BEGIN
 
   IF v_total <> 12 OR v_rank <> 1 THEN
     RAISE EXCEPTION 'Re-archiving did not update the new leader';
+  END IF;
+
+  SELECT total_points,rank INTO v_total,v_rank
+  FROM public.challenge_result_snapshots
+  WHERE period_type='weekly'
+    AND period_id='20000000-0000-0000-0000-000000000001'
+    AND student_id='40000000-0000-0000-0000-000000000003';
+
+  IF v_total <> 0 OR v_rank <> 3 THEN
+    RAISE EXCEPTION 'Zero-point student was not preserved in the weekly snapshot';
   END IF;
 
   IF (SELECT count(*) FROM public.admin_audit_logs
