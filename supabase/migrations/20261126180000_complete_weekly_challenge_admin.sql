@@ -21,22 +21,27 @@ begin
     raise exception 'تأكد من صحة تاريخ بداية ونهاية الأسبوع';
   end if;
 
-  select * into v_week
-  from public.weekly_challenges
-  where weekly_challenges.id = p_weekly_challenge_id and status = 'active'
-  for update;
-
-  if not found then
-    raise exception 'لا يمكن تعديل تواريخ أسبوع غير نشط';
-  end if;
-
+  -- Lock the active month first, matching weekly start/reopen lock order.
   select * into v_month
   from public.competitions
-  where competitions.id = v_week.competition_id and status = 'active'
+  where status = 'active'
+  order by created_at desc
+  limit 1
   for update;
 
   if not found then
-    raise exception 'الدورة الشهرية المرتبطة بالأسبوع ليست نشطة';
+    raise exception 'لا توجد دورة شهرية نشطة';
+  end if;
+
+  select * into v_week
+  from public.weekly_challenges
+  where weekly_challenges.id = p_weekly_challenge_id
+    and competition_id = v_month.id
+    and status = 'active'
+  for update;
+
+  if not found then
+    raise exception 'لا يمكن تعديل تواريخ أسبوع غير نشط أو غير تابع للدورة الحالية';
   end if;
 
   if p_week_start < v_month.month_start or (v_month.month_end is not null and p_week_end > v_month.month_end) then
@@ -76,20 +81,37 @@ begin
     raise exception 'اختر أسبوعًا من الأرشيف';
   end if;
 
-  if exists(select 1 from public.weekly_challenges where status = 'active') then
-    raise exception 'يوجد أسبوع نشط بالفعل؛ أنهِه أولًا';
+  -- Lock the active month before the week, matching the weekly-start path.
+  select c.* into v_month
+  from public.competitions c
+  where c.status = 'active'
+    and exists (
+      select 1 from public.weekly_challenges w
+      where w.id = p_weekly_challenge_id
+        and w.competition_id = c.id
+        and w.status = 'archived'
+    )
+  order by c.created_at desc
+  limit 1
+  for update;
+
+  if not found then
+    raise exception 'لا يمكن إعادة فتح هذا الأسبوع؛ تأكد أن دورته الشهرية نشطة وأن الأسبوع مؤرشف';
   end if;
 
   select w.* into v_week
   from public.weekly_challenges w
-  join public.competitions c on c.id = w.competition_id
   where w.id = p_weekly_challenge_id
+    and w.competition_id = v_month.id
     and w.status = 'archived'
-    and c.status = 'active'
-  for update of w;
+  for update;
 
   if not found then
-    raise exception 'لا يمكن إعادة فتح هذا الأسبوع؛ تأكد أن دورته الشهرية نشطة وأن الأسبوع مؤرشف';
+    raise exception 'لم يعد الأسبوع مؤرشفًا أو لم يعد تابعًا للدورة النشطة';
+  end if;
+
+  if exists(select 1 from public.weekly_challenges where status = 'active') then
+    raise exception 'يوجد أسبوع نشط بالفعل؛ أنهِه أولًا';
   end if;
 
   if exists (
