@@ -6,6 +6,8 @@ CREATE ROLE authenticated NOLOGIN;
 CREATE SCHEMA auth;
 CREATE SCHEMA private;
 
+CREATE TABLE auth.users (id uuid PRIMARY KEY);
+
 CREATE FUNCTION auth.uid() RETURNS uuid
 LANGUAGE sql STABLE
 AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
@@ -19,8 +21,13 @@ CREATE TABLE public.competitions (
   month_start date NOT NULL,
   month_end date,
   title text NOT NULL,
-  status text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  status text NOT NULL CHECK (status IN ('active','archived')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  archived_at timestamptz,
+  ended_by uuid REFERENCES auth.users(id),
+  month_end date CHECK (month_end IS NULL OR month_end >= month_start),
+  awards_revision_pending boolean NOT NULL DEFAULT false,
+  awards_finalized_at timestamptz
 );
 
 CREATE TABLE public.weekly_challenges (
@@ -30,11 +37,13 @@ CREATE TABLE public.weekly_challenges (
   week_start date NOT NULL,
   week_end date,
   title text NOT NULL,
-  status text NOT NULL,
-  created_by uuid NOT NULL,
-  ended_by uuid,
+  status text NOT NULL CHECK (status IN ('active','archived')),
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  ended_by uuid REFERENCES auth.users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
-  ended_at timestamptz
+  ended_at timestamptz,
+  CHECK (week_number BETWEEN 1 AND 5),
+  UNIQUE (competition_id, week_number)
 );
 
 CREATE UNIQUE INDEX one_active_week_fixture
@@ -47,7 +56,9 @@ CREATE TABLE public.admin_audit_logs (
   action text NOT NULL,
   entity_type text NOT NULL,
   entity_id text,
-  details jsonb NOT NULL DEFAULT '{}'::jsonb
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (admin_user_id) REFERENCES auth.users(id)
 );
 
 CREATE TABLE public.challenge_result_snapshots (
@@ -59,6 +70,7 @@ CREATE TABLE public.challenge_result_snapshots (
   total_points integer NOT NULL,
   rank integer NOT NULL,
   captured_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (period_type IN ('weekly','monthly')),
   UNIQUE(period_type, period_id, student_id)
 );
 
@@ -121,6 +133,9 @@ FOR EACH ROW EXECUTE FUNCTION public.capture_challenge_results();
 CREATE TRIGGER capture_monthly_challenge_results
 AFTER UPDATE OF status ON public.competitions
 FOR EACH ROW EXECUTE FUNCTION public.capture_challenge_results();
+
+INSERT INTO auth.users(id)
+VALUES ('30000000-0000-0000-0000-000000000001');
 
 INSERT INTO public.competitions(id,month_start,month_end,title,status)
 VALUES ('10000000-0000-0000-0000-000000000001','2026-11-01','2026-11-30','اختبار نوفمبر','active');
@@ -229,6 +244,21 @@ BEGIN
   IF (SELECT count(*) FROM public.admin_audit_logs
       WHERE action='REOPEN' AND entity_id='20000000-0000-0000-0000-000000000001') <> 1 THEN
     RAISE EXCEPTION 'Reopen audit event was not recorded exactly once';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated','public.admin_set_weekly_dates(uuid,date,date)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','public.admin_reopen_weekly_challenge(uuid)','EXECUTE') THEN
+    RAISE EXCEPTION 'Authenticated role is missing the intended RPC grants';
+  END IF;
+
+  IF (SELECT prosecdef FROM pg_proc WHERE oid='public.admin_set_weekly_dates(uuid,date,date)'::regprocedure) IS NOT TRUE
+     OR (SELECT prosecdef FROM pg_proc WHERE oid='public.admin_reopen_weekly_challenge(uuid)'::regprocedure) IS NOT TRUE THEN
+    RAISE EXCEPTION 'Admin RPCs must remain SECURITY DEFINER';
+  END IF;
+
+  IF (SELECT proconfig FROM pg_proc WHERE oid='public.admin_set_weekly_dates(uuid,date,date)'::regprocedure) IS DISTINCT FROM ARRAY['search_path=""']::text[]
+     OR (SELECT proconfig FROM pg_proc WHERE oid='public.admin_reopen_weekly_challenge(uuid)'::regprocedure) IS DISTINCT FROM ARRAY['search_path=""']::text[] THEN
+    RAISE EXCEPTION 'Admin RPC search_path must remain empty';
   END IF;
 
   INSERT INTO public.weekly_challenges(id,competition_id,week_number,week_start,week_end,title,status,created_by)
