@@ -1089,8 +1089,10 @@ function renderPeriodControls(monthly,weekly){
   $("weeklyStatus").textContent=weekly?"نشط — الأسبوع "+weekName(weekly.week_number)+" — من "+dateText(weekly.week_start)+" إلى "+(weekly.week_end?dateText(weekly.week_end):"نهاية غير محددة"):"لا يوجد أسبوع نشط حاليًا";
   $("weeklyEndBtn").classList.toggle("hidden",!weekly);
   $("weeklyStartBtn").classList.toggle("hidden",!!weekly||!monthly);
-  if(!$("weeklyStartDate").value)$("weeklyStartDate").value=localDate();
-  if(!$("weeklyEndDate").value)$("weeklyEndDate").value=localDate();
+  if(weekly){$("weeklyStartDate").value=weekly.week_start;$("weeklyEndDate").value=weekly.week_end||"";}
+  else{if(!$("weeklyStartDate").value)$("weeklyStartDate").value=localDate();if(!$("weeklyEndDate").value)$("weeklyEndDate").value=localDate();}
+  $("weeklyStartDate").disabled=!!weekly;$("weeklyEndDate").disabled=!!weekly;
+  $("weeklySaveDatesBtn").classList.toggle("hidden",!weekly);
   $("weeklyStartBtn").textContent="بدء الأسبوع المحدد"
 }
 async function loadHistory(monthly){
@@ -1154,9 +1156,21 @@ $("weeklyStartBtn").onclick=async()=>{
     msg("pointsMessage","بدأ الأسبوع "+weekName(created.week_number)+" بنجاح.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر بدء الأسبوع: "+e.message,true)}
 };
+$("weeklySaveDatesBtn").onclick=async()=>{
+  try{
+    const user=await currentAdmin(),active=await activeWeekly();if(!active)throw Error("لا يوجد أسبوع نشط لتعديل تواريخه.");
+    const start=$("weeklyStartDate").value,end=$("weeklyEndDate").value;
+    if(!start||!end||end<start)throw Error("تأكد من صحة تاريخ بداية ونهاية الأسبوع.");
+    if(!confirm("حفظ تواريخ الأسبوع؟\nالبداية: "+dateText(start)+"\nالنهاية: "+dateText(end)))return;
+    const {error}=await db.rpc("admin_set_weekly_dates",{p_weekly_challenge_id:active.id,p_week_start:start,p_week_end:end});if(error)throw error;
+    await writeAudit(user,"update","weekly_challenge",active.id,{old_week_start:active.week_start,old_week_end:active.week_end,week_start:start,week_end:end});
+    msg("pointsMessage","تم حفظ تواريخ الأسبوع بنجاح.");await loadDashboard();
+  }catch(error){msg("pointsMessage","تعذر حفظ تواريخ الأسبوع: "+error.message,true)}
+};
 $("weeklyEndBtn").onclick=async()=>{
   try{const user=await currentAdmin(),active=await activeWeekly();if(!active)throw Error("لا يوجد تحدٍ أسبوعي نشط.");
     const finalWeekEnd=active.week_end||localDate();
+    if(!confirm("هل تريد إنهاء الأسبوع "+weekName(active.week_number)+" وحفظ نتائجه في الأرشيف؟"))return;
     const r=await db.from("weekly_challenges").update({status:"archived",week_end:finalWeekEnd,ended_at:new Date().toISOString(),ended_by:user.id}).eq("id",active.id);if(r.error)throw r.error;
     await writeAudit(user,"end","weekly_challenge",active.id,{week_start:active.week_start,week_end:finalWeekEnd});msg("pointsMessage","انتهى التحدي الأسبوعي وحُفظت نتائجه.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الأسبوعي: "+e.message,true)}
@@ -1165,6 +1179,7 @@ $("monthlyStartBtn").onclick=async()=>{
   try{const user=await currentAdmin(),active=await activeMonthly();if(active){msg("pointsMessage","يوجد تحدٍ شهري نشط بالفعل.",true);return}
     const start=$("monthlyStartDate").value,end=$("monthlyEndDate").value;
     if(!start||!end||end<start)throw Error("حدد تاريخ بداية ونهاية صحيحين للتحدي الشهري.");
+    if(!confirm("مراجعة التحدي الشهري الجديد:\nالبداية: "+dateText(start)+"\nالنهاية: "+dateText(end)+"\n\nهل تؤكد إنشاء التحدي؟"))return;
     const r=await db.rpc("admin_start_monthly_challenge",{p_month_start:start,p_month_end:end});if(r.error)throw r.error;
     const created=Array.isArray(r.data)?r.data[0]:r.data;
     await writeAudit(user,"start","monthly_challenge",created.id,{month_start:start,month_end:end});msg("pointsMessage","بدأ التحدي الشهري بنجاح.");await loadDashboard()
@@ -1203,6 +1218,7 @@ $("monthlyEndBtn").onclick=async()=>{
   try{const user=await currentAdmin(),active=await activeMonthly();if(!active)throw Error("لا يوجد تحدٍ شهري نشط.");
     if(await activeWeekly())throw Error("أنهِي الأسبوع النشط أولًا قبل إنهاء التحدي الشهري.");
     if(!active.month_end)throw Error("حدد تاريخ نهاية التحدي الشهري واحفظه أولًا.");
+    if(!confirm("هل تريد إنهاء التحدي الشهري وحفظ نتائجه وأوسمته في الأرشيف؟"))return;
     const r=await db.from("competitions").update({status:"archived",archived_at:new Date().toISOString(),ended_by:user.id}).eq("id",active.id);if(r.error)throw r.error;
     await writeAudit(user,"end","monthly_challenge",active.id,{month_start:active.month_start});msg("pointsMessage","انتهى التحدي الشهري وحُفظت نتائجه.");await loadDashboard()
   }catch(e){msg("pointsMessage","تعذر إنهاء التحدي الشهري: "+e.message,true)}
