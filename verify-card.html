@@ -35,9 +35,16 @@ footer{margin-top:22px;padding-top:15px;border-top:1px solid #e7dfc8;font-size:1
  number.textContent=card;
  if(!/^[0-9]{8}$/.test(card)){box.innerHTML='<div class="status invalid">رقم كارت غير صحيح</div><p>تأكد من مسح رمز QR الموجود على الكارت.</p>';return}
  try{
-  const db=supabase.createClient("https://rjbiahkjfmhexexssczg.supabase.co","sb_publishable_4_pS_PYlIamm6eXOWzGmTg_IY0mN-oR");
-  const {data,error}=await db.rpc("verify_achievement_card",{p_card_number:card});
-  if(error)throw error;
+  const response=await fetch("https://rjbiahkjfmhexexssczg.supabase.co/functions/v1/public-student-gateway",{
+   method:"POST",
+   headers:{"apikey":"sb_publishable_4_pS_PYlIamm6eXOWzGmTg_IY0mN-oR","Content-Type":"application/json"},
+   body:JSON.stringify({action:"verify",p_card_number:card})
+  });
+  let payload={};
+  try{payload=await response.json()}catch(e){}
+  if(!response.ok)throw new Error(payload.error||"تعذر الاتصال بخدمة التحقق.");
+  const data=payload.data;
+  if(!data)throw new Error("لم تصل نتيجة التحقق.");
   if(!data||!data.found){box.innerHTML='<div class="status invalid">الكارت غير مسجل</div><p>لم نعثر على كارت بهذا الرقم في سجلات صفوة الحفاظ.</p>';return}
   if(data.valid){
    const student=data.snapshot?.student||{};
